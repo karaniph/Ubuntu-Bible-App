@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './SearchView.css';
+import { NavigationTarget } from '../App';
 
 interface Verse {
     id: number;
@@ -8,11 +9,21 @@ interface Verse {
     chapter: number;
     verse: number;
     text: string;
+    book_id?: number; // Added optional book ID
 }
 
 interface SearchViewProps {
-    onNavigateToBible: () => void;
+    onNavigateToBible: (target: NavigationTarget) => void;
 }
+
+// Helper to map book codes or names to IDs if not returned by search
+// In a real app the search query should return book_id
+// For now, let's use a quick map or assume strict return from API
+// Actually better, let's update setSearch logic in database.ts if possible, but 
+// for now let's reuse the one from ReadingPlans for simplicity or just rely on book name matching in BibleView if we refactor it.
+// Wait, BibleView expects ID.
+// Let's create a minimal map here too or importing it would be better.
+// For safety, let's ask Electron for the book ID or search returns it.
 
 export default function SearchView({ onNavigateToBible }: SearchViewProps) {
     const [query, setQuery] = useState('');
@@ -58,6 +69,21 @@ export default function SearchView({ onNavigateToBible }: SearchViewProps) {
         );
     };
 
+    const handleResultClick = async (verse: Verse) => {
+        // We need the book ID. The current search API might not return it directly,
+        // but let's check. Use a lookup if needed. 
+        // Actually, let's just fetch all books once to map names to IDs.
+        const books = await window.electronAPI.getBooks();
+        const book = books.find((b: any) => b.name === verse.book_name || b.code === verse.book_code);
+
+        if (book) {
+            onNavigateToBible({
+                bookId: book.id,
+                chapter: verse.chapter
+            });
+        }
+    };
+
     return (
         <div className="search-view">
             <div className="search-header">
@@ -85,7 +111,11 @@ export default function SearchView({ onNavigateToBible }: SearchViewProps) {
 
                 <ul className="results-list">
                     {results.map((verse) => (
-                        <li key={verse.id} className="result-item">
+                        <li
+                            key={verse.id}
+                            className="result-item"
+                            onClick={() => handleResultClick(verse)}
+                        >
                             <p className="result-reference">
                                 {verse.book_name} {verse.chapter}:{verse.verse}
                             </p>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './DailyHome.css';
+import { NavigationTarget } from '../App';
 
 interface DailyHomeProps {
-    onNavigateToBible: () => void;
+    onNavigateToBible: (target?: NavigationTarget) => void;
 }
 
 // Curated daily verses
@@ -94,7 +95,7 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
                     </button>
                 </div>
 
-                <button className="read-chapter-button" onClick={onNavigateToBible}>
+                <button className="read-chapter-button" onClick={() => onNavigateToBible()}>
                     📖 Read Full Bible
                 </button>
             </div>

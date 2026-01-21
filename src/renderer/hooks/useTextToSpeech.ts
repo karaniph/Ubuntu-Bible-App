@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 interface TTSState {
     isPlaying: boolean;
@@ -15,58 +15,79 @@ export function useTextToSpeech() {
 
     const [rate, setRate] = useState(0.9);
 
+    // Helpers to prevent garbage collection
+    const currentUtterance = useRef<SpeechSynthesisUtterance | null>(null);
+
     // Clean up on unmount
     useEffect(() => {
         return () => {
-            speechSynthesis.cancel();
+            window.speechSynthesis.cancel();
         };
     }, []);
 
     const speak = useCallback((texts: string[], onComplete?: () => void) => {
-        speechSynthesis.cancel();
-        setState({ isPlaying: true, isPaused: false, currentIndex: 0 });
+        // Stop any current speech
+        window.speechSynthesis.cancel();
 
-        let index = 0;
+        // Tiny timeout to ensure clean slate
+        setTimeout(() => {
+            setState({ isPlaying: true, isPaused: false, currentIndex: 0 });
+            let index = 0;
 
-        const speakNext = () => {
-            if (index >= texts.length) {
-                setState({ isPlaying: false, isPaused: false, currentIndex: 0 });
-                onComplete?.();
-                return;
-            }
+            const speakNext = () => {
+                if (index >= texts.length || !state.isPlaying && index > 0) { // Safety check
+                    setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentIndex: 0 }));
+                    onComplete?.();
+                    return;
+                }
 
-            const utterance = new SpeechSynthesisUtterance(texts[index]);
-            utterance.rate = rate;
-            utterance.pitch = 1;
+                const utterance = new SpeechSynthesisUtterance(texts[index]);
+                currentUtterance.current = utterance; // Keep ref to prevent GC
 
-            utterance.onend = () => {
-                index++;
-                setState(s => ({ ...s, currentIndex: index }));
-                speakNext();
+                utterance.rate = rate;
+                utterance.pitch = 1;
+
+                // Try to find a good English voice
+                const voices = window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(v => v.lang.startsWith('en') && !v.localService) ||
+                    voices.find(v => v.lang.startsWith('en'));
+                if (preferredVoice) utterance.voice = preferredVoice;
+
+                utterance.onend = () => {
+                    index++;
+                    setState(prev => ({ ...prev, currentIndex: index }));
+                    if (index < texts.length) {
+                        speakNext();
+                    } else {
+                        setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentIndex: 0 }));
+                        onComplete?.();
+                    }
+                };
+
+                utterance.onerror = (e) => {
+                    console.error("TTS Error:", e);
+                    setState(prev => ({ ...prev, isPlaying: false, isPaused: false, currentIndex: 0 }));
+                };
+
+                window.speechSynthesis.speak(utterance);
             };
 
-            utterance.onerror = () => {
-                setState({ isPlaying: false, isPaused: false, currentIndex: 0 });
-            };
-
-            speechSynthesis.speak(utterance);
-        };
-
-        speakNext();
+            speakNext();
+        }, 50);
     }, [rate]);
 
     const stop = useCallback(() => {
-        speechSynthesis.cancel();
+        window.speechSynthesis.cancel();
         setState({ isPlaying: false, isPaused: false, currentIndex: 0 });
     }, []);
 
     const pause = useCallback(() => {
-        speechSynthesis.pause();
+        window.speechSynthesis.pause();
         setState(s => ({ ...s, isPaused: true }));
     }, []);
 
     const resume = useCallback(() => {
-        speechSynthesis.resume();
+        window.speechSynthesis.resume();
         setState(s => ({ ...s, isPaused: false }));
     }, []);
 

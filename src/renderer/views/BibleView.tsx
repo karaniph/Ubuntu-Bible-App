@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import './BibleView.css';
+import { NavigationTarget } from '../App';
 
 interface Book {
     id: number;
@@ -24,7 +25,12 @@ interface Translation {
     name: string;
 }
 
-export default function BibleView() {
+interface BibleViewProps {
+    initialTarget?: NavigationTarget | null;
+    onTargetConsumed?: () => void;
+}
+
+export default function BibleView({ initialTarget, onTargetConsumed }: BibleViewProps) {
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
     const [verses, setVerses] = useState<Verse[]>([]);
@@ -47,9 +53,32 @@ export default function BibleView() {
                 ]);
                 setTranslations(trans);
                 setBooks(bks);
-                if (bks.length > 0) {
+
+                // Handle initial navigation target
+                if (initialTarget && bks.length > 0) {
+                    // Find target book
+                    let targetBook: Book | undefined;
+                    if (initialTarget.bookId) {
+                        targetBook = bks.find(b => b.id === initialTarget.bookId);
+                    }
+
+                    if (targetBook) {
+                        setSelectedBook(targetBook);
+                        if (initialTarget.chapter) setSelectedChapter(initialTarget.chapter);
+                    } else if (!selectedBook) {
+                        setSelectedBook(bks[0]);
+                    }
+
+                    if (initialTarget.translationId) {
+                        setSelectedTranslation(initialTarget.translationId);
+                    }
+
+                    // Clear the target so it doesn't re-trigger
+                    if (onTargetConsumed) onTargetConsumed();
+                } else if (!selectedBook && bks.length > 0) {
                     setSelectedBook(bks[0]);
                 }
+
                 setLoading(false);
             } catch (err) {
                 console.error('Failed to load data:', err);
@@ -57,7 +86,7 @@ export default function BibleView() {
             }
         }
         loadData();
-    }, []);
+    }, [initialTarget]); // Re-run if target changes
 
     // Load chapter count when book changes
     useEffect(() => {
@@ -65,7 +94,7 @@ export default function BibleView() {
             if (selectedBook) {
                 const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
                 setChapterCount(count);
-                setSelectedChapter(1);
+                // Don't reset chapter if we just navigated to a specific one
             }
         }
         loadChapterCount();
@@ -111,7 +140,10 @@ export default function BibleView() {
                         <li key={book.id}>
                             <button
                                 className={`book-item ${selectedBook?.id === book.id ? 'active' : ''}`}
-                                onClick={() => setSelectedBook(book)}
+                                onClick={() => {
+                                    setSelectedBook(book);
+                                    setSelectedChapter(1); // Reset to ch 1 on manual book change
+                                }}
                             >
                                 {book.name}
                             </button>
