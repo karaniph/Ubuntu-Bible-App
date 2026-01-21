@@ -1,0 +1,87 @@
+/* Global Reset */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme Variables - Light (default) */
+:root {
+    --bg-primary: #FDFCFA;
+    --bg-secondary: #F5F3EF;
+    --text-primary: #2C2825;
+    --text-secondary: #6B6560;
+    --text-muted: #9A9590;
+    --accent: #8B7355;
+    --accent-muted: rgba(139, 115, 85, 0.15);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark Theme */
+.theme-dark {
+    --bg-primary: #1A1918;
+    --bg-secondary: #252321;
+    --text-primary: #E8E4DF;
+    --text-secondary: #B0AAA3;
+    --text-muted: #706A63;
+    --accent: #C4A77D;
+    --accent-muted: rgba(196, 167, 125, 0.15);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+}
+
+/* Sepia Theme */
+.theme-sepia {
+    --bg-primary: #F4EADB;
+    --bg-secondary: #EBE0CF;
+    --text-primary: #3D3428;
+    --text-secondary: #6B5D4D;
+    --text-muted: #8A7A68;
+    --accent: #8B6914;
+    --accent-muted: rgba(139, 105, 20, 0.15);
+    --border-subtle: rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--accent-muted);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Focus styles */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+    background: var(--accent-muted);
+    color: var(--text-primary);
+}

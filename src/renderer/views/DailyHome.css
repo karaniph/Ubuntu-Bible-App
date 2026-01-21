@@ -1,0 +1,122 @@
+.daily-home {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
+    padding: 48px;
+}
+
+.daily-content {
+    max-width: 600px;
+    text-align: center;
+}
+
+.cross-symbol {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    opacity: 0.4;
+    margin-bottom: 32px;
+}
+
+.daily-verse {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 1.6rem;
+    line-height: 1.7;
+    font-style: italic;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+    padding: 0;
+    border: none;
+}
+
+.verse-reference {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 48px;
+}
+
+.reflection-section {
+    margin-bottom: 32px;
+}
+
+.reflection-prompt {
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+.begin-button {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 16px;
+    transition: opacity 0.2s;
+}
+
+.begin-button:hover {
+    opacity: 0.8;
+}
+
+.reflection-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.reflection-textarea {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
+}
+
+.reflection-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.save-button {
+    align-self: center;
+    padding: 12px 24px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.save-button:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.save-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.read-chapter-button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 8px 16px;
+    transition: color 0.2s;
+}
+
+.read-chapter-button:hover {
+    color: var(--accent);
+}
