@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import './BibleView.css';
 
 interface Book {
@@ -32,6 +33,9 @@ export default function BibleView() {
     const [selectedChapter, setSelectedChapter] = useState<number>(1);
     const [chapterCount, setChapterCount] = useState<number>(1);
     const [loading, setLoading] = useState(true);
+
+    // Text-to-Speech
+    const tts = useTextToSpeech();
 
     // Load initial data
     useEffect(() => {
@@ -78,6 +82,22 @@ export default function BibleView() {
         loadVerses();
     }, [selectedBook, selectedChapter, selectedTranslation]);
 
+    // Stop TTS when chapter changes
+    useEffect(() => {
+        tts.stop();
+    }, [selectedBook, selectedChapter]);
+
+    const handleListen = () => {
+        if (tts.isPlaying && !tts.isPaused) {
+            tts.pause();
+        } else if (tts.isPaused) {
+            tts.resume();
+        } else {
+            const texts = verses.map(v => `Verse ${v.verse}. ${v.text}`);
+            tts.speak(texts);
+        }
+    };
+
     if (loading) {
         return <div className="bible-view loading">Loading...</div>;
     }
@@ -105,20 +125,38 @@ export default function BibleView() {
                     <h1 className="chapter-title">
                         {selectedBook?.name} {selectedChapter}
                     </h1>
-                    <select
-                        className="translation-select"
-                        value={selectedTranslation}
-                        onChange={(e) => setSelectedTranslation(Number(e.target.value))}
-                    >
-                        {translations.map((t) => (
-                            <option key={t.id} value={t.id}>{t.code}</option>
-                        ))}
-                    </select>
+                    <div className="header-controls">
+                        {/* Text-to-Speech Button */}
+                        <button
+                            className={`tts-button ${tts.isPlaying ? 'playing' : ''}`}
+                            onClick={handleListen}
+                            title={tts.isPlaying ? (tts.isPaused ? 'Resume' : 'Pause') : 'Listen to chapter'}
+                        >
+                            {tts.isPlaying ? (tts.isPaused ? '▶️ Resume' : '⏸️ Pause') : '🔊 Listen'}
+                        </button>
+                        {tts.isPlaying && (
+                            <button className="tts-stop" onClick={tts.stop} title="Stop">
+                                ⏹️
+                            </button>
+                        )}
+                        <select
+                            className="translation-select"
+                            value={selectedTranslation}
+                            onChange={(e) => setSelectedTranslation(Number(e.target.value))}
+                        >
+                            {translations.map((t) => (
+                                <option key={t.id} value={t.id}>{t.code}</option>
+                            ))}
+                        </select>
+                    </div>
                 </header>
 
                 <div className="verses-container">
-                    {verses.map((verse) => (
-                        <p key={verse.id} className="verse-row">
+                    {verses.map((verse, index) => (
+                        <p
+                            key={verse.id}
+                            className={`verse-row ${tts.isPlaying && tts.currentIndex === index ? 'speaking' : ''}`}
+                        >
                             <sup className="verse-number">{verse.verse}</sup>
                             <span className="verse-text">{verse.text}</span>
                         </p>

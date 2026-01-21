@@ -1,7 +1,7 @@
 import React from 'react';
 import './Sidebar.css';
 
-type View = 'daily' | 'bible' | 'search' | 'settings';
+type View = 'daily' | 'bible' | 'search' | 'plans' | 'settings';
 
 interface SidebarProps {
     currentView: View;
@@ -9,9 +9,10 @@ interface SidebarProps {
 }
 
 const navItems: { view: View; label: string; icon: string }[] = [
-    { view: 'daily', label: 'Daily', icon: '☀️' },
+    { view: 'daily', label: 'Today', icon: '☀️' },
     { view: 'bible', label: 'Bible', icon: '📖' },
     { view: 'search', label: 'Search', icon: '🔍' },
+    { view: 'plans', label: 'Plans', icon: '📚' },
     { view: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

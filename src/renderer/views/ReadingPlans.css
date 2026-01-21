@@ -1,0 +1,217 @@
+.reading-plans {
+    padding: 32px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.plans-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.plans-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 32px;
+}
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.plan-card {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.plan-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.plan-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.plan-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.plan-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 12px 0;
+}
+
+.plan-duration {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.plan-progress {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mini-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--accent-muted);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mini-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+}
+
+.progress-percent {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+/* Active Plan View */
+.active-plan {
+    text-align: center;
+}
+
+.back-button {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-bottom: 24px;
+}
+
+.back-button:hover {
+    text-decoration: underline;
+}
+
+.plan-title {
+    font-size: 2rem;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+
+.progress-bar {
+    height: 12px;
+    background: var(--accent-muted);
+    border-radius: 6px;
+    overflow: hidden;
+    max-width: 400px;
+    margin: 0 auto 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #d4af37);
+    transition: width 0.5s;
+}
+
+.progress-text {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 48px;
+}
+
+.today-reading {
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.today-reading h2 {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0 0 12px 0;
+}
+
+.reading-reference {
+    font-family: 'Georgia', serif;
+    font-size: 1.75rem;
+    color: var(--text-primary);
+    margin: 0 0 32px 0;
+}
+
+.reading-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.read-button,
+.complete-button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.read-button {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.read-button:hover {
+    transform: scale(1.02);
+}
+
+.complete-button {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+}
+
+.complete-button:hover {
+    background: #4caf50;
+    color: white;
+}
+
+.completion-message {
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    padding: 48px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.completion-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.completion-message h2 {
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.completion-message p {
+    color: var(--text-secondary);
+    margin: 0;
+}

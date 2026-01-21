@@ -1,9 +1,10 @@
 .daily-home {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     min-height: 100%;
-    padding: 48px;
+    padding: 32px;
+    overflow-y: auto;
 }
 
 .daily-content {
@@ -16,12 +17,12 @@
     font-size: 1.5rem;
     color: var(--text-muted);
     opacity: 0.4;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .daily-verse {
     font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     line-height: 1.7;
     font-style: italic;
     color: var(--text-primary);
@@ -33,90 +34,103 @@
 .verse-reference {
     color: var(--text-muted);
     font-size: 0.95rem;
-    margin-bottom: 48px;
-}
-
-.reflection-section {
     margin-bottom: 32px;
 }
 
-.reflection-prompt {
+/* PROMINENT NOTEPAD CARD */
+.notepad-card {
+    background: var(--bg-secondary);
+    border: 2px solid var(--accent-muted);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.notepad-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.notepad-icon {
+    font-size: 1.5rem;
+}
+
+.notepad-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.notepad-prompt {
     color: var(--text-secondary);
     font-style: italic;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
 }
 
-.begin-button {
-    background: transparent;
-    border: none;
-    color: var(--accent);
-    font-size: 1rem;
-    cursor: pointer;
-    padding: 8px 16px;
-    transition: opacity 0.2s;
-}
-
-.begin-button:hover {
-    opacity: 0.8;
-}
-
-.reflection-input-area {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.reflection-textarea {
+.notepad-textarea {
     width: 100%;
     padding: 16px;
     border: 1px solid var(--border-subtle);
     border-radius: 12px;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     color: var(--text-primary);
     font-family: inherit;
     font-size: 1rem;
     line-height: 1.6;
     resize: vertical;
+    margin-bottom: 16px;
 }
 
-.reflection-textarea:focus {
+.notepad-textarea:focus {
     outline: none;
     border-color: var(--accent);
 }
 
-.save-button {
-    align-self: center;
-    padding: 12px 24px;
-    background: var(--accent-muted);
-    color: var(--accent);
+.notepad-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.notepad-save-button {
+    display: block;
+    width: 100%;
+    padding: 14px 24px;
+    background: var(--accent);
+    color: var(--bg-primary);
     border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.save-button:hover:not(:disabled) {
-    background: var(--accent);
-    color: var(--bg-primary);
+.notepad-save-button:hover:not(:disabled) {
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.save-button:disabled {
+.notepad-save-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 .read-chapter-button {
-    background: transparent;
+    background: var(--accent-muted);
     border: none;
-    color: var(--text-muted);
-    font-size: 0.9rem;
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
-    padding: 8px 16px;
-    transition: color 0.2s;
+    padding: 14px 28px;
+    border-radius: 10px;
+    transition: all 0.2s;
 }
 
 .read-chapter-button:hover {
-    color: var(--accent);
+    background: var(--accent);
+    color: var(--bg-primary);
 }

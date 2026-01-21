@@ -31,7 +31,6 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
     const [dailyVerse, setDailyVerse] = useState(DAILY_VERSES[0]);
     const [prompt, setPrompt] = useState(PROMPTS[0]);
     const [reflection, setReflection] = useState('');
-    const [showReflection, setShowReflection] = useState(false);
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -39,17 +38,24 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
         const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
         setDailyVerse(DAILY_VERSES[dayOfYear % DAILY_VERSES.length]);
         setPrompt(PROMPTS[dayOfYear % PROMPTS.length]);
+
+        // Load any saved reflection for today
+        const savedReflections = JSON.parse(localStorage.getItem('reflections') || '[]');
+        const todayISO = new Date().toISOString().split('T')[0];
+        const todayReflection = savedReflections.find((r: any) => r.date.startsWith(todayISO));
+        if (todayReflection) {
+            setReflection(todayReflection.text);
+        }
     }, []);
 
     const handleSave = () => {
-        // Save to localStorage for now
-        const saved = JSON.parse(localStorage.getItem('reflections') || '[]');
-        saved.push({
+        const savedReflections = JSON.parse(localStorage.getItem('reflections') || '[]');
+        savedReflections.push({
             date: new Date().toISOString(),
             verse: dailyVerse.ref,
             text: reflection,
         });
-        localStorage.setItem('reflections', JSON.stringify(saved));
+        localStorage.setItem('reflections', JSON.stringify(savedReflections));
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     };
@@ -65,38 +71,31 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
 
                 <p className="verse-reference">— {dailyVerse.ref}</p>
 
-                <div className="reflection-section">
-                    <p className="reflection-prompt">{prompt}</p>
-
-                    {!showReflection ? (
-                        <button
-                            className="begin-button"
-                            onClick={() => setShowReflection(true)}
-                        >
-                            Begin reflecting...
-                        </button>
-                    ) : (
-                        <div className="reflection-input-area">
-                            <textarea
-                                className="reflection-textarea"
-                                placeholder="Write your thoughts..."
-                                value={reflection}
-                                onChange={(e) => setReflection(e.target.value)}
-                                rows={4}
-                            />
-                            <button
-                                className="save-button"
-                                onClick={handleSave}
-                                disabled={!reflection.trim()}
-                            >
-                                {saved ? 'Reflection kept ✓' : 'Keep This Reflection'}
-                            </button>
-                        </div>
-                    )}
+                {/* PROMINENT NOTEPAD SECTION */}
+                <div className="notepad-card">
+                    <div className="notepad-header">
+                        <span className="notepad-icon">📝</span>
+                        <span className="notepad-title">My Reflection</span>
+                    </div>
+                    <p className="notepad-prompt">{prompt}</p>
+                    <textarea
+                        className="notepad-textarea"
+                        placeholder="Write your thoughts here..."
+                        value={reflection}
+                        onChange={(e) => setReflection(e.target.value)}
+                        rows={5}
+                    />
+                    <button
+                        className="notepad-save-button"
+                        onClick={handleSave}
+                        disabled={!reflection.trim()}
+                    >
+                        {saved ? '✓ Saved!' : '💾 Save Reflection'}
+                    </button>
                 </div>
 
                 <button className="read-chapter-button" onClick={onNavigateToBible}>
-                    Read Full Bible →
+                    📖 Read Full Bible
                 </button>
             </div>
         </div>
