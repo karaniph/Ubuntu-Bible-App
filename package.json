@@ -6,9 +6,11 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build && electron-builder",
+        "build:main": "tsc -p src/main/tsconfig.json",
+        "build:renderer": "vite build",
         "preview": "vite preview",
         "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-        "electron:build": "vite build && electron-builder --linux snap"
+        "electron:build": "npm run build:main && npm run build:renderer && electron-builder --linux snap"
     },
     "author": "karaniph",
     "license": "MIT",
