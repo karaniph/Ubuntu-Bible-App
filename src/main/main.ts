@@ -74,4 +74,10 @@ function registerIpcHandlers() {
     ipcMain.handle('db:getChapterCount', (_, bookId: number, translationId: number) =>
         getChapterCount(bookId, translationId)
     );
+    ipcMain.handle('db:toggleHighlight', (_, verseId: number, color: string) =>
+        toggleHighlight(verseId, color)
+    );
+    ipcMain.handle('db:getHighlights', () =>
+        getHighlights()
+    );
 }

@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('db:searchVerses', query, translationId),
     getChapterCount: (bookId: number, translationId: number) =>
         ipcRenderer.invoke('db:getChapterCount', bookId, translationId),
+    toggleHighlight: (verseId: number, color: string) =>
+        ipcRenderer.invoke('db:toggleHighlight', verseId, color),
+    getHighlights: () =>
+        ipcRenderer.invoke('db:getHighlights'),
 });
 
 // Type declarations

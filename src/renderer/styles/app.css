@@ -1,3 +1,13 @@
+/* Global Variables */
+:root {
+    --highlight-yellow: rgba(255, 235, 59, 0.4);
+    --highlight-green: rgba(76, 175, 80, 0.4);
+    --highlight-blue: rgba(33, 150, 243, 0.4);
+    --highlight-pink: rgba(233, 30, 99, 0.4);
+    --accent-muted: rgba(211, 84, 0, 0.1);
+    /* fallback */
+}
+
 /* App Layout */
 .app {
     display: flex;

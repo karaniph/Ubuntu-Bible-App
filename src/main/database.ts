@@ -11,8 +11,20 @@ export function initDatabase() {
         ? path.join(__dirname, '../../assets/bible.db')
         : path.join(process.resourcesPath, 'assets/bible.db');
 
-    db = new Database(dbPath, { readonly: true });
+    db = new Database(dbPath, { readonly: false });
     console.log('Database connected:', dbPath);
+
+    // Initialize Schema
+    db.prepare(`
+        CREATE TABLE IF NOT EXISTS highlights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            verse_id INTEGER NOT NULL,
+            color TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (verse_id) REFERENCES verses(id),
+            UNIQUE(verse_id)
+        )
+    `).run();
 }
 
 export function getTranslations() {
@@ -29,14 +41,50 @@ export function getBooks() {
 
 export function getVerses(translationId: number, bookId: number, chapter: number) {
     if (!db) return [];
+    // Left join highlights to get color if exists
     const stmt = db.prepare(`
-    SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
+    SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text, h.color
     FROM verses v
     JOIN books b ON v.book_id = b.id
+    LEFT JOIN highlights h ON v.id = h.verse_id
     WHERE v.translation_id = ? AND v.book_id = ? AND v.chapter = ?
     ORDER BY v.verse
   `);
     return stmt.all(translationId, bookId, chapter);
+}
+
+export function toggleHighlight(verseId: number, color: string) {
+    if (!db) return null;
+    const existing = db.prepare('SELECT id, color FROM highlights WHERE verse_id = ?').get(verseId) as { id: number, color: string } | undefined;
+
+    if (existing) {
+        if (existing.color === color) {
+            // Remove if same color
+            db.prepare('DELETE FROM highlights WHERE id = ?').run(existing.id);
+            return null; // Removed
+        } else {
+            // Update color
+            db.prepare('UPDATE highlights SET color = ? WHERE id = ?').run(color, existing.id);
+            return color;
+        }
+    } else {
+        // Insert
+        db.prepare('INSERT INTO highlights (verse_id, color) VALUES (?, ?)').run(verseId, color);
+        return color;
+    }
+}
+
+export function getHighlights() {
+    if (!db) return [];
+    const stmt = db.prepare(`
+        SELECT h.id, h.verse_id, h.color, h.created_at, 
+               v.text, v.chapter, v.verse, v.book_id, b.name as book_name, b.code as book_code
+        FROM highlights h
+        JOIN verses v ON h.verse_id = v.id
+        JOIN books b ON v.book_id = b.id
+        ORDER BY h.created_at DESC
+    `);
+    return stmt.all();
 }
 
 export function searchVerses(query: string, translationId: number, limit: number = 50) {

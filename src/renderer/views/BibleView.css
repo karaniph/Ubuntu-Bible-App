@@ -104,9 +104,93 @@
     max-width: 700px;
 }
 
+
+
+/* Highlight Classes */
+.verse-row.highlight-yellow {
+    background-color: var(--highlight-yellow);
+}
+
+.verse-row.highlight-green {
+    background-color: var(--highlight-green);
+}
+
+.verse-row.highlight-blue {
+    background-color: var(--highlight-blue);
+}
+
+.verse-row.highlight-pink {
+    background-color: var(--highlight-pink);
+}
+
+/* Color Picker */
+.highlight-picker {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 6px;
+    display: flex;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+    border-color: var(--text-primary);
+}
+
+.color-option.yellow {
+    background-color: #fdd835;
+}
+
+.color-option.green {
+    background-color: #4caf50;
+}
+
+.color-option.blue {
+    background-color: #2196f3;
+}
+
+.color-option.pink {
+    background-color: #e91e63;
+}
+
+.color-option.clear {
+    background-color: transparent;
+    border: 2px solid var(--text-muted);
+    position: relative;
+}
+
+.color-option.clear::after {
+    content: '✕';
+    position: absolute;
+    top: 0;
+    left: 6px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
 .verse-row {
-    margin-bottom: 16px;
     line-height: 1.85;
+    margin-bottom: 16px;
+    position: relative;
+    /* For popup positioning */
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.3s;
 }
 
 .verse-number {
@@ -114,6 +198,15 @@
     font-size: 0.75em;
     margin-right: 6px;
     opacity: 0.7;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.verse-number:hover {
+    background-color: var(--accent-muted);
+    color: var(--accent);
 }
 
 .verse-text {
