@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import './BibleView.css';
 import { NavigationTarget } from '../App';
 
@@ -34,14 +33,11 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
     const [verses, setVerses] = useState<Verse[]>([]);
-    const [selectedTranslation, setSelectedTranslation] = useState<number>(1);
+    const [selectedTranslation, setSelectedTranslation] = useState<number>(0); // Initialize to 0, will be set after load
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
     const [selectedChapter, setSelectedChapter] = useState<number>(1);
     const [chapterCount, setChapterCount] = useState<number>(1);
     const [loading, setLoading] = useState(true);
-
-    // Text-to-Speech
-    const tts = useTextToSpeech();
 
     // Load initial data
     useEffect(() => {
@@ -53,6 +49,13 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                 ]);
                 setTranslations(trans);
                 setBooks(bks);
+
+                // Set default translation to first available if not set
+                let currentTranslationId = selectedTranslation;
+                if (currentTranslationId === 0 && trans.length > 0) {
+                    currentTranslationId = trans[0].id; // Default to first available
+                    setSelectedTranslation(currentTranslationId);
+                }
 
                 // Handle initial navigation target
                 if (initialTarget && bks.length > 0) {
@@ -71,6 +74,9 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
 
                     if (initialTarget.translationId) {
                         setSelectedTranslation(initialTarget.translationId);
+                    } else if (currentTranslationId === 0) {
+                        // Fallback if target has no translation and we don't have one selected yet
+                        if (trans.length > 0) setSelectedTranslation(trans[0].id);
                     }
 
                     // Clear the target so it doesn't re-trigger
@@ -91,10 +97,9 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     // Load chapter count when book changes
     useEffect(() => {
         async function loadChapterCount() {
-            if (selectedBook) {
+            if (selectedBook && selectedTranslation > 0) {
                 const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
                 setChapterCount(count);
-                // Don't reset chapter if we just navigated to a specific one
             }
         }
         loadChapterCount();
@@ -103,29 +108,13 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     // Load verses when book/chapter/translation changes
     useEffect(() => {
         async function loadVerses() {
-            if (selectedBook) {
+            if (selectedBook && selectedTranslation > 0) {
                 const v = await window.electronAPI.getVerses(selectedTranslation, selectedBook.id, selectedChapter);
                 setVerses(v);
             }
         }
         loadVerses();
     }, [selectedBook, selectedChapter, selectedTranslation]);
-
-    // Stop TTS when chapter changes
-    useEffect(() => {
-        tts.stop();
-    }, [selectedBook, selectedChapter]);
-
-    const handleListen = () => {
-        if (tts.isPlaying && !tts.isPaused) {
-            tts.pause();
-        } else if (tts.isPaused) {
-            tts.resume();
-        } else {
-            const texts = verses.map(v => `Verse ${v.verse}. ${v.text}`);
-            tts.speak(texts);
-        }
-    };
 
     if (loading) {
         return <div className="bible-view loading">Loading...</div>;
@@ -158,19 +147,6 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                         {selectedBook?.name} {selectedChapter}
                     </h1>
                     <div className="header-controls">
-                        {/* Text-to-Speech Button */}
-                        <button
-                            className={`tts-button ${tts.isPlaying ? 'playing' : ''}`}
-                            onClick={handleListen}
-                            title={tts.isPlaying ? (tts.isPaused ? 'Resume' : 'Pause') : 'Listen to chapter'}
-                        >
-                            {tts.isPlaying ? (tts.isPaused ? '▶️ Resume' : '⏸️ Pause') : '🔊 Listen'}
-                        </button>
-                        {tts.isPlaying && (
-                            <button className="tts-stop" onClick={tts.stop} title="Stop">
-                                ⏹️
-                            </button>
-                        )}
                         <select
                             className="translation-select"
                             value={selectedTranslation}
@@ -184,11 +160,8 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                 </header>
 
                 <div className="verses-container">
-                    {verses.map((verse, index) => (
-                        <p
-                            key={verse.id}
-                            className={`verse-row ${tts.isPlaying && tts.currentIndex === index ? 'speaking' : ''}`}
-                        >
+                    {verses.map((verse) => (
+                        <p key={verse.id} className="verse-row">
                             <sup className="verse-number">{verse.verse}</sup>
                             <span className="verse-text">{verse.text}</span>
                         </p>
