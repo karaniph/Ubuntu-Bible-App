@@ -11,6 +11,8 @@ function createWindow() {
         minWidth: 900,
         minHeight: 600,
         title: 'Bible App',
+        show: false, // Don't show until ready
+
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -25,6 +27,12 @@ function createWindow() {
     } else {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     }
+
+    mainWindow.once('ready-to-show', () => {
+        mainWindow?.show();
+    });
+
+
 
     mainWindow.on('closed', () => {
         mainWindow = null;

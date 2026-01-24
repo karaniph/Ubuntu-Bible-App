@@ -17,7 +17,7 @@ export function initDatabase() {
 
 export function getTranslations() {
     if (!db) return [];
-    const stmt = db.prepare('SELECT id, code, name FROM translations ORDER BY id');
+    const stmt = db.prepare("SELECT id, code, name FROM translations WHERE name NOT LIKE '%sample%' ORDER BY id");
     return stmt.all();
 }
 
