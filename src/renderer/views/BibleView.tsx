@@ -43,7 +43,72 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     // Highlighting state
     const [activeHighlightId, setActiveHighlightId] = useState<number | null>(null);
 
-    // ... (useEffect for loadData remains same)
+    // Load initial data
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const [trans, bks] = await Promise.all([
+                    window.electronAPI.getTranslations(),
+                    window.electronAPI.getBooks(),
+                ]);
+                setTranslations(trans);
+                setBooks(bks);
+
+                // Set default translation to KJV if available, otherwise first available
+                let currentTranslationId = selectedTranslation;
+                if (currentTranslationId === 0 && trans.length > 0) {
+                    const kjv = trans.find(t => t.code.includes('KJV') || t.name.includes('King James'));
+                    currentTranslationId = kjv ? kjv.id : trans[0].id;
+                    setSelectedTranslation(currentTranslationId);
+                }
+
+                // Handle initial navigation target
+                if (initialTarget && bks.length > 0) {
+                    // Find target book
+                    let targetBook: Book | undefined;
+                    if (initialTarget.bookId) {
+                        targetBook = bks.find(b => b.id === initialTarget.bookId);
+                    }
+
+                    if (targetBook) {
+                        setSelectedBook(targetBook);
+                        if (initialTarget.chapter) setSelectedChapter(initialTarget.chapter);
+                    } else if (!selectedBook) {
+                        setSelectedBook(bks[0]);
+                    }
+
+                    if (initialTarget.translationId) {
+                        setSelectedTranslation(initialTarget.translationId);
+                    } else if (currentTranslationId === 0) {
+                        // Fallback if target has no translation and we don't have one selected yet
+                        if (trans.length > 0) setSelectedTranslation(trans[0].id);
+                    }
+
+                    // Clear the target so it doesn't re-trigger
+                    if (onTargetConsumed) onTargetConsumed();
+                } else if (!selectedBook && bks.length > 0) {
+                    setSelectedBook(bks[0]);
+                }
+
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to load data:', err);
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, [initialTarget]); // Re-run if target changes
+
+    // Load chapter count when book changes
+    useEffect(() => {
+        async function loadChapterCount() {
+            if (selectedBook && selectedTranslation > 0) {
+                const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
+                setChapterCount(count);
+            }
+        }
+        loadChapterCount();
+    }, [selectedBook, selectedTranslation]);
 
     // Load verses when book/chapter/translation changes
     useEffect(() => {
@@ -66,12 +131,53 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
         setActiveHighlightId(null);
     };
 
-    // ... (rest of render)
+    if (loading) {
+        return <div className="bible-view loading">Loading...</div>;
+    }
+
+    return (
+        <div className="bible-view">
+            <aside className="book-selector">
+                <h2 className="selector-title">Books</h2>
+                <ul className="book-list">
+                    {books.map((book) => (
+                        <li key={book.id}>
+                            <button
+                                className={`book-item ${selectedBook?.id === book.id ? 'active' : ''}`}
+                                onClick={() => {
+                                    setSelectedBook(book);
+                                    setSelectedChapter(1); // Reset to ch 1 on manual book change
+                                }}
+                            >
+                                {book.name}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </aside>
+
+            <div className="reading-area">
+                <header className="reading-header">
+                    <h1 className="chapter-title">
+                        {selectedBook?.name} {selectedChapter}
+                    </h1>
+                    <div className="header-controls">
+                        <select
+                            className="translation-select"
+                            value={selectedTranslation}
+                            onChange={(e) => setSelectedTranslation(Number(e.target.value))}
+                        >
+                            {translations.map((t) => (
+                                <option key={t.id} value={t.id}>{t.code}</option>
+                            ))}
+                        </select>
+                    </div>
+                </header>
 
                 <div className="verses-container">
                     {verses.map((verse) => (
-                        <p 
-                            key={verse.id} 
+                        <p
+                            key={verse.id}
                             className={`verse-row ${verse.color ? 'highlight-' + verse.color : ''}`}
                         >
                             {activeHighlightId === verse.id && (
@@ -83,8 +189,8 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                                     <div className="color-option clear" onClick={() => handleHighlight(verse.id, verse.color || '')} title="Clear" />
                                 </div>
                             )}
-                            <sup 
-                                className="verse-number" 
+                            <sup
+                                className="verse-number"
                                 onClick={() => setActiveHighlightId(activeHighlightId === verse.id ? null : verse.id)}
                                 title="Click to highlight"
                             >
@@ -114,7 +220,7 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                         Next →
                     </button>
                 </footer>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }

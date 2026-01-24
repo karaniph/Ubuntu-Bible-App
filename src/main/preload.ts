@@ -26,6 +26,8 @@ declare global {
             getVerses: (translationId: number, bookId: number, chapter: number) => Promise<Verse[]>;
             searchVerses: (query: string, translationId: number) => Promise<Verse[]>;
             getChapterCount: (bookId: number, translationId: number) => Promise<number>;
+            toggleHighlight: (verseId: number, color: string) => Promise<string | null>;
+            getHighlights: () => Promise<any[]>;
         };
     }
 }

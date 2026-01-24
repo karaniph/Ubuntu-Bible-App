@@ -5,7 +5,6 @@ import { app } from 'electron';
 let db: Database.Database | null = null;
 
 export function initDatabase() {
-    // Get database path - works in both dev and packaged app
     const isDev = process.env.NODE_ENV === 'development';
     const dbPath = isDev
         ? path.join(__dirname, '../../assets/bible.db')
@@ -14,7 +13,6 @@ export function initDatabase() {
     db = new Database(dbPath, { readonly: false });
     console.log('Database connected:', dbPath);
 
-    // Initialize Schema
     db.prepare(`
         CREATE TABLE IF NOT EXISTS highlights (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +39,6 @@ export function getBooks() {
 
 export function getVerses(translationId: number, bookId: number, chapter: number) {
     if (!db) return [];
-    // Left join highlights to get color if exists
     const stmt = db.prepare(`
     SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text, h.color
     FROM verses v
@@ -59,16 +56,13 @@ export function toggleHighlight(verseId: number, color: string) {
 
     if (existing) {
         if (existing.color === color) {
-            // Remove if same color
             db.prepare('DELETE FROM highlights WHERE id = ?').run(existing.id);
-            return null; // Removed
+            return null;
         } else {
-            // Update color
             db.prepare('UPDATE highlights SET color = ? WHERE id = ?').run(color, existing.id);
             return color;
         }
     } else {
-        // Insert
         db.prepare('INSERT INTO highlights (verse_id, color) VALUES (?, ?)').run(verseId, color);
         return color;
     }
@@ -89,8 +83,6 @@ export function getHighlights() {
 
 export function searchVerses(query: string, translationId: number, limit: number = 50) {
     if (!db || !query.trim()) return [];
-
-    // Use FTS5 if available, fallback to LIKE
     try {
         const stmt = db.prepare(`
       SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
@@ -102,7 +94,6 @@ export function searchVerses(query: string, translationId: number, limit: number
     `);
         return stmt.all(query, translationId, limit);
     } catch {
-        // Fallback to LIKE search
         const stmt = db.prepare(`
       SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
       FROM verses v

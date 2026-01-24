@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount } from './database';
+import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights } from './database';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -11,7 +11,7 @@ function createWindow() {
         minWidth: 900,
         minHeight: 600,
         title: 'Bible App',
-        show: false, // Don't show until ready
+        show: false,
 
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -20,7 +20,6 @@ function createWindow() {
         },
     });
 
-    // Load the app
     if (process.env.NODE_ENV === 'development') {
         mainWindow.loadURL('http://localhost:5173');
         mainWindow.webContents.openDevTools();
@@ -32,20 +31,14 @@ function createWindow() {
         mainWindow?.show();
     });
 
-
-
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
 }
 
 app.whenReady().then(() => {
-    // Initialize database
     initDatabase();
-
-    // Register IPC handlers
     registerIpcHandlers();
-
     createWindow();
 
     app.on('activate', () => {
@@ -62,7 +55,6 @@ app.on('window-all-closed', () => {
 });
 
 function registerIpcHandlers() {
-    // Bible data queries
     ipcMain.handle('db:getTranslations', () => getTranslations());
     ipcMain.handle('db:getBooks', () => getBooks());
     ipcMain.handle('db:getVerses', (_, translationId: number, bookId: number, chapter: number) =>
