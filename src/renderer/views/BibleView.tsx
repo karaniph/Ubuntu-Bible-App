@@ -50,10 +50,11 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                 setTranslations(trans);
                 setBooks(bks);
 
-                // Set default translation to first available if not set
+                // Set default translation to KJV if available, otherwise first available
                 let currentTranslationId = selectedTranslation;
                 if (currentTranslationId === 0 && trans.length > 0) {
-                    currentTranslationId = trans[0].id; // Default to first available
+                    const kjv = trans.find(t => t.code.includes('KJV') || t.name.includes('King James'));
+                    currentTranslationId = kjv ? kjv.id : trans[0].id;
                     setSelectedTranslation(currentTranslationId);
                 }
 
