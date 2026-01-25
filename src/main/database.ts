@@ -1,28 +1,47 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { app } from 'electron';
 
 let db: Database.Database | null = null;
 
 export function initDatabase() {
     const isDev = process.env.NODE_ENV === 'development';
-    const dbPath = isDev
+
+    // 1. Determine Source Path (where the app ships the DB)
+    const sourceDbPath = isDev
         ? path.join(__dirname, '../../assets/bible.db')
         : path.join(process.resourcesPath, 'assets/bible.db');
 
-    db = new Database(dbPath, { readonly: false });
-    console.log('Database connected:', dbPath);
+    // 2. Determine Destination Path (writable directory for user data)
+    const userDataPath = app.getPath('userData');
+    const destDbPath = path.join(userDataPath, 'bible.db');
 
-    db.prepare(`
-        CREATE TABLE IF NOT EXISTS highlights (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            verse_id INTEGER NOT NULL,
-            color TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (verse_id) REFERENCES verses(id),
-            UNIQUE(verse_id)
-        )
-    `).run();
+    try {
+        // 3. Sync DB if missing or in Dev (in dev we always want latest from source)
+        if (!fs.existsSync(destDbPath) || isDev) {
+            console.log('Copying database to writable location:', destDbPath);
+            fs.copyFileSync(sourceDbPath, destDbPath);
+        }
+
+        // 4. Open from the writable location
+        db = new Database(destDbPath, { readonly: false });
+        console.log('Database connected at:', destDbPath);
+
+        // 5. Initialize Schema
+        db.prepare(`
+            CREATE TABLE IF NOT EXISTS highlights (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                verse_id INTEGER NOT NULL,
+                color TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (verse_id) REFERENCES verses(id),
+                UNIQUE(verse_id)
+            )
+        `).run();
+    } catch (err) {
+        console.error('CRITICAL: Failed to initialize database:', err);
+    }
 }
 
 export function getTranslations() {
