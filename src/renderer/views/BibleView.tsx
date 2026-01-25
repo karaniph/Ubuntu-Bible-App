@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './BibleView.css';
-import { NavigationTarget } from '../App';
+import { NavigationTarget, Topic } from '../App';
 
 interface Book {
     id: number;
@@ -42,17 +42,23 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
 
     // Highlighting state
     const [activeHighlightId, setActiveHighlightId] = useState<number | null>(null);
+    const [topics, setTopics] = useState<Topic[]>([]);
+    const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
+    const [isAddingTopic, setIsAddingTopic] = useState(false);
+    const [newTopicName, setNewTopicName] = useState('');
 
     // Load initial data
     useEffect(() => {
         async function loadData() {
             try {
-                const [trans, bks] = await Promise.all([
+                const [trans, bks, tops] = await Promise.all([
                     window.electronAPI.getTranslations(),
                     window.electronAPI.getBooks(),
+                    window.electronAPI.getTopics()
                 ]);
                 setTranslations(trans);
                 setBooks(bks);
+                setTopics(tops);
 
                 // Set default translation to KJV if available, otherwise first available
                 let currentTranslationId = selectedTranslation;
@@ -123,12 +129,25 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     }, [selectedBook, selectedChapter, selectedTranslation]);
 
     const handleHighlight = async (verseId: number, color: string) => {
-        const resultColor = await window.electronAPI.toggleHighlight(verseId, color);
+        const resultColor = await window.electronAPI.toggleHighlight(verseId, color, selectedTopicId);
         // Optimistic update
         setVerses(prev => prev.map(v =>
             v.id === verseId ? { ...v, color: resultColor || undefined } : v
         ));
         setActiveHighlightId(null);
+        setSelectedTopicId(undefined);
+    };
+
+    const handleCreateTopic = async () => {
+        if (!newTopicName.trim()) return;
+        const newId = await window.electronAPI.createTopic(newTopicName);
+        if (newId) {
+            const updatedTopics = await window.electronAPI.getTopics();
+            setTopics(updatedTopics);
+            setSelectedTopicId(Number(newId));
+            setNewTopicName('');
+            setIsAddingTopic(false);
+        }
     };
 
     if (loading) {
@@ -176,28 +195,53 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
 
                 <div className="verses-container">
                     {verses.map((verse) => (
-                        <p
+                        <div
                             key={verse.id}
                             className={`verse-row ${verse.color ? 'highlight-' + verse.color : ''}`}
                         >
                             {activeHighlightId === verse.id && (
-                                <div className="highlight-picker">
-                                    <div className="color-option yellow" onClick={() => handleHighlight(verse.id, 'yellow')} title="Yellow" />
-                                    <div className="color-option green" onClick={() => handleHighlight(verse.id, 'green')} title="Green" />
-                                    <div className="color-option blue" onClick={() => handleHighlight(verse.id, 'blue')} title="Blue" />
-                                    <div className="color-option pink" onClick={() => handleHighlight(verse.id, 'pink')} title="Pink" />
-                                    <div className="color-option clear" onClick={() => handleHighlight(verse.id, verse.color || '')} title="Clear" />
+                                <div className="highlight-picker expanded">
+                                    <div className="picker-colors">
+                                        <div className="color-option yellow" onClick={() => handleHighlight(verse.id, 'yellow')} title="Yellow" />
+                                        <div className="color-option green" onClick={() => handleHighlight(verse.id, 'green')} title="Green" />
+                                        <div className="color-option blue" onClick={() => handleHighlight(verse.id, 'blue')} title="Blue" />
+                                        <div className="color-option pink" onClick={() => handleHighlight(verse.id, 'pink')} title="Pink" />
+                                        <div className="color-option clear" onClick={() => handleHighlight(verse.id, verse.color || '')} title="Clear" />
+                                    </div>
+                                    <div className="picker-topic">
+                                        <select
+                                            value={selectedTopicId || ''}
+                                            onChange={(e) => setSelectedTopicId(e.target.value ? Number(e.target.value) : undefined)}
+                                            className="topic-miniselect"
+                                        >
+                                            <option value="">No Topic</option>
+                                            {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                        <button className="add-topic-btn" onClick={() => setIsAddingTopic(!isAddingTopic)}>+</button>
+                                    </div>
+                                    {isAddingTopic && (
+                                        <div className="new-topic-row">
+                                            <input
+                                                value={newTopicName}
+                                                onChange={(e) => setNewTopicName(e.target.value)}
+                                                placeholder="New topic..."
+                                                onKeyDown={(e) => e.key === 'Enter' && handleCreateTopic()}
+                                                autoFocus
+                                            />
+                                            <button onClick={handleCreateTopic}>Add</button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <sup
                                 className="verse-number"
                                 onClick={() => setActiveHighlightId(activeHighlightId === verse.id ? null : verse.id)}
-                                title="Click to highlight"
+                                title="Click to highlight/tag"
                             >
                                 {verse.verse}
                             </sup>
                             <span className="verse-text">{verse.text}</span>
-                        </p>
+                        </div>
                     ))}
                 </div>
 

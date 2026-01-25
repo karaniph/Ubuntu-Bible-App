@@ -1,0 +1,120 @@
+.favorites-view {
+    padding: 32px;
+    height: 100%;
+    overflow-y: auto;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 16px;
+}
+
+.view-title {
+    font-size: 2rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.topic-select {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.favorites-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.favorite-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border-left: 6px solid transparent;
+}
+
+.favorite-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent);
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.reference {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--accent);
+}
+
+.topic-badge {
+    background: var(--accent-muted);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.verse-preview {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    font-style: italic;
+    margin: 0 0 16px 0;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.jump-link {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Highlight Colors */
+.favorite-card.highlight-yellow {
+    border-left-color: #fdd835;
+}
+
+.favorite-card.highlight-green {
+    border-left-color: #4caf50;
+}
+
+.favorite-card.highlight-blue {
+    border-left-color: #2196f3;
+}
+
+.favorite-card.highlight-pink {
+    border-left-color: #e91e63;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px;
+    font-size: 1.2rem;
+}

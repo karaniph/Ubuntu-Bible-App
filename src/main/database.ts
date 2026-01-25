@@ -30,17 +30,52 @@ export function initDatabase() {
 
         // 5. Initialize Schema
         db.prepare(`
+            CREATE TABLE IF NOT EXISTS topics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                color TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+
+        db.prepare(`
             CREATE TABLE IF NOT EXISTS highlights (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 verse_id INTEGER NOT NULL,
                 color TEXT NOT NULL,
+                topic_id INTEGER,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (verse_id) REFERENCES verses(id),
+                FOREIGN KEY (topic_id) REFERENCES topics(id),
                 UNIQUE(verse_id)
             )
         `).run();
+
+        // Migrate existing highlights if they don't have topic_id column (should be handled by CREATE if it was updated, but SQLite doesn't add columns to existing tables easily without checking)
+        try {
+            db.prepare('ALTER TABLE highlights ADD COLUMN topic_id INTEGER REFERENCES topics(id)').run();
+        } catch (e) {
+            // Column might already exist
+        }
     } catch (err) {
         console.error('CRITICAL: Failed to initialize database:', err);
+    }
+}
+
+export function getTopics() {
+    if (!db) return [];
+    return db.prepare('SELECT * FROM topics ORDER BY name').all();
+}
+
+export function createTopic(name: string, color?: string) {
+    if (!db) return null;
+    try {
+        const result = db.prepare('INSERT INTO topics (name, color) VALUES (?, ?)').run(name, color);
+        return result.lastInsertRowid;
+    } catch (e) {
+        // Topic might exist
+        const existing = db.prepare('SELECT id FROM topics WHERE name = ?').get(name) as { id: number };
+        return existing?.id;
     }
 }
 
@@ -69,20 +104,20 @@ export function getVerses(translationId: number, bookId: number, chapter: number
     return stmt.all(translationId, bookId, chapter);
 }
 
-export function toggleHighlight(verseId: number, color: string) {
+export function toggleHighlight(verseId: number, color: string, topicId?: number) {
     if (!db) return null;
-    const existing = db.prepare('SELECT id, color FROM highlights WHERE verse_id = ?').get(verseId) as { id: number, color: string } | undefined;
+    const existing = db.prepare('SELECT id, color, topic_id FROM highlights WHERE verse_id = ?').get(verseId) as { id: number, color: string, topic_id: number | null } | undefined;
 
     if (existing) {
-        if (existing.color === color) {
+        if (existing.color === color && existing.topic_id === topicId) {
             db.prepare('DELETE FROM highlights WHERE id = ?').run(existing.id);
             return null;
         } else {
-            db.prepare('UPDATE highlights SET color = ? WHERE id = ?').run(color, existing.id);
+            db.prepare('UPDATE highlights SET color = ?, topic_id = ? WHERE id = ?').run(color, topicId, existing.id);
             return color;
         }
     } else {
-        db.prepare('INSERT INTO highlights (verse_id, color) VALUES (?, ?)').run(verseId, color);
+        db.prepare('INSERT INTO highlights (verse_id, color, topic_id) VALUES (?, ?, ?)').run(verseId, color, topicId);
         return color;
     }
 }
@@ -90,11 +125,12 @@ export function toggleHighlight(verseId: number, color: string) {
 export function getHighlights() {
     if (!db) return [];
     const stmt = db.prepare(`
-        SELECT h.id, h.verse_id, h.color, h.created_at, 
+        SELECT h.id, h.verse_id, h.color, h.created_at, h.topic_id, t.name as topic_name,
                v.text, v.chapter, v.verse, v.book_id, b.name as book_name, b.code as book_code
         FROM highlights h
         JOIN verses v ON h.verse_id = v.id
         JOIN books b ON v.book_id = b.id
+        LEFT JOIN topics t ON h.topic_id = t.id
         ORDER BY h.created_at DESC
     `);
     return stmt.all();

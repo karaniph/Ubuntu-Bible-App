@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
-import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights } from './database';
+import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic } from './database';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -66,10 +66,16 @@ function registerIpcHandlers() {
     ipcMain.handle('db:getChapterCount', (_, bookId: number, translationId: number) =>
         getChapterCount(bookId, translationId)
     );
-    ipcMain.handle('db:toggleHighlight', (_, verseId: number, color: string) =>
-        toggleHighlight(verseId, color)
+    ipcMain.handle('db:toggleHighlight', (_, verseId: number, color: string, topicId?: number) =>
+        toggleHighlight(verseId, color, topicId)
     );
     ipcMain.handle('db:getHighlights', () =>
         getHighlights()
+    );
+    ipcMain.handle('db:getTopics', () =>
+        getTopics()
+    );
+    ipcMain.handle('db:createTopic', (_, name: string, color?: string) =>
+        createTopic(name, color)
     );
 }

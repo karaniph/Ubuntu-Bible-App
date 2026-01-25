@@ -3,11 +3,15 @@ import Sidebar from './components/Sidebar';
 import DailyHome from './views/DailyHome';
 import BibleView from './views/BibleView';
 import SearchView from './views/SearchView';
+import FavoritesView from './views/FavoritesView';
 import ReadingPlans from './views/ReadingPlans';
 import SettingsView from './views/SettingsView';
 import './styles/app.css';
+import { Topic } from '../main/preload';
 
-type View = 'daily' | 'bible' | 'search' | 'plans' | 'settings';
+export type { Topic };
+
+type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'settings';
 
 export interface NavigationTarget {
     bookId?: number;
@@ -42,6 +46,8 @@ export default function App() {
                 );
             case 'search':
                 return <SearchView onNavigateToBible={handleNavigateToBible} />;
+            case 'favorites':
+                return <FavoritesView onNavigateToBible={handleNavigateToBible} />;
             case 'plans':
                 return <ReadingPlans onNavigateToBible={handleNavigateToBible} />;
             case 'settings':
