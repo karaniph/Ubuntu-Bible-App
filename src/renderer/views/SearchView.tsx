@@ -62,11 +62,17 @@ export default function SearchView({ onNavigateToBible }: SearchViewProps) {
 
     const highlightMatch = (text: string, searchTerm: string) => {
         if (!searchTerm.trim()) return text;
-        const regex = new RegExp(`(${searchTerm})`, 'gi');
-        const parts = text.split(regex);
-        return parts.map((part, i) =>
-            regex.test(part) ? <mark key={i} className="highlight">{part}</mark> : part
-        );
+        try {
+            // Escape special regex characters to prevent crashes
+            const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escaped})`, 'gi');
+            const parts = text.split(regex);
+            return parts.map((part, i) =>
+                regex.test(part) ? <mark key={i} className="highlight">{part}</mark> : part
+            );
+        } catch (e) {
+            return text;
+        }
     };
 
     const handleResultClick = async (verse: Verse) => {

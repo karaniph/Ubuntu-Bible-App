@@ -139,6 +139,7 @@ export function getHighlights() {
 export function searchVerses(query: string, translationId: number, limit: number = 50) {
     if (!db || !query.trim()) return [];
     try {
+        // Preferred: Full Text Search
         const stmt = db.prepare(`
       SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
       FROM verses_fts fts
@@ -148,15 +149,23 @@ export function searchVerses(query: string, translationId: number, limit: number
       LIMIT ?
     `);
         return stmt.all(query, translationId, limit);
-    } catch {
-        const stmt = db.prepare(`
-      SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
-      FROM verses v
-      JOIN books b ON v.book_id = b.id
-      WHERE v.text LIKE ? AND v.translation_id = ?
-      LIMIT ?
-    `);
-        return stmt.all(`%${query}%`, translationId, limit);
+    } catch (ftsError) {
+        console.log('FTS search fallback (table might be missing or query invalid):', ftsError);
+        // Fallback: Standard LIKE search
+        try {
+            const stmt = db.prepare(`
+          SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
+          FROM verses v
+          JOIN books b ON v.book_id = b.id
+          WHERE (v.text LIKE ? OR b.name LIKE ?) AND v.translation_id = ?
+          LIMIT ?
+        `);
+            const searchTerm = `%${query}%`;
+            return stmt.all(searchTerm, searchTerm, translationId, limit);
+        } catch (likeError) {
+            console.error('Search failed completely:', likeError);
+            return [];
+        }
     }
 }
 

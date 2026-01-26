@@ -1,8 +1,21 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic } from './database';
 
 let mainWindow: BrowserWindow | null = null;
+
+function setAppMenu() {
+    const isMac = process.platform === 'darwin';
+    const template: Electron.MenuItemConstructorOptions[] = [
+        ...(isMac ? [{ role: 'appMenu' as const }] : []),
+        { role: 'fileMenu' as const },
+        { role: 'editMenu' as const },
+        { role: 'viewMenu' as const },
+        { role: 'windowMenu' as const }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -12,7 +25,6 @@ function createWindow() {
         minHeight: 600,
         title: 'Bible App',
         show: false,
-
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -35,24 +47,6 @@ function createWindow() {
         mainWindow = null;
     });
 }
-
-app.whenReady().then(() => {
-    initDatabase();
-    registerIpcHandlers();
-    createWindow();
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
-});
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
-});
 
 function registerIpcHandlers() {
     ipcMain.handle('db:getTranslations', () => getTranslations());
@@ -79,3 +73,22 @@ function registerIpcHandlers() {
         createTopic(name, color)
     );
 }
+
+app.whenReady().then(() => {
+    initDatabase();
+    registerIpcHandlers();
+    setAppMenu();
+    createWindow();
+
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+    });
+});
+
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
+});

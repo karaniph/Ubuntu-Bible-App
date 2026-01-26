@@ -17,6 +17,7 @@ interface Verse {
     verse: number;
     text: string;
     color?: string; // yellow, green, blue, pink
+    topic_id?: number;
 }
 
 interface Translation {
@@ -37,11 +38,29 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     const [selectedTranslation, setSelectedTranslation] = useState<number>(0);
     const [selectedBook, setSelectedBook] = useState<Book | null>(null);
     const [selectedChapter, setSelectedChapter] = useState<number>(1);
+    const [tempChapterValue, setTempChapterValue] = useState<string>('1');
     const [chapterCount, setChapterCount] = useState<number>(1);
     const [loading, setLoading] = useState(true);
 
+    // Sync temp value when chapter changes externally (e.g. Next/Prev buttons)
+    useEffect(() => {
+        setTempChapterValue(selectedChapter.toString());
+    }, [selectedChapter]);
+
+    const commitChapterChange = (value: string) => {
+        const val = parseInt(value);
+        if (!isNaN(val)) {
+            const clamped = Math.max(1, Math.min(val, chapterCount));
+            setSelectedChapter(clamped);
+            // Ensure temp value is consistent with the clamped value
+            setTempChapterValue(clamped.toString());
+        } else {
+            // Reset to current chapter if input is invalid
+            setTempChapterValue(selectedChapter.toString());
+        }
+    };
+
     // Highlighting state
-    const [activeHighlightId, setActiveHighlightId] = useState<number | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number, verseId: number } | null>(null);
     const [topics, setTopics] = useState<Topic[]>([]);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -123,7 +142,6 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
             if (selectedBook && selectedTranslation > 0) {
                 const v = await window.electronAPI.getVerses(selectedTranslation, selectedBook.id, selectedChapter);
                 setVerses(v);
-                setActiveHighlightId(null); // Clear picker on nav
             }
         }
         loadVerses();
@@ -140,7 +158,6 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
             y: e.clientY,
             verseId
         });
-        setActiveHighlightId(null); // Close old picker if any
     };
 
     const handleHighlight = async (verseId: number, color: string) => {
@@ -293,16 +310,19 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                     </button>
                     <div className="chapter-selector-input">
                         <input
-                            type="number"
-                            min={1}
-                            max={chapterCount}
-                            value={selectedChapter}
+                            type="text"
+                            inputMode="numeric"
+                            value={tempChapterValue}
                             onChange={(e) => {
-                                const val = parseInt(e.target.value);
-                                if (!isNaN(val)) {
-                                    if (val >= 1 && val <= chapterCount) {
-                                        setSelectedChapter(val);
-                                    }
+                                // Only allow digits or empty string while typing
+                                if (e.target.value === '' || /^\d+$/.test(e.target.value)) {
+                                    setTempChapterValue(e.target.value);
+                                }
+                            }}
+                            onBlur={(e) => commitChapterChange(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    commitChapterChange((e.target as HTMLInputElement).value);
                                 }
                             }}
                             className="chapter-direct-input"
