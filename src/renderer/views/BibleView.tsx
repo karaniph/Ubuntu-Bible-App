@@ -291,9 +291,24 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                     >
                         ← Previous
                     </button>
-                    <span className="chapter-indicator">
-                        {selectedChapter} / {chapterCount}
-                    </span>
+                    <div className="chapter-selector-input">
+                        <input
+                            type="number"
+                            min={1}
+                            max={chapterCount}
+                            value={selectedChapter}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val)) {
+                                    if (val >= 1 && val <= chapterCount) {
+                                        setSelectedChapter(val);
+                                    }
+                                }
+                            }}
+                            className="chapter-direct-input"
+                        />
+                        <span className="chapter-count-label">/ {chapterCount}</span>
+                    </div>
                     <button
                         className="nav-button"
                         disabled={selectedChapter >= chapterCount}

@@ -362,9 +362,45 @@
     cursor: not-allowed;
 }
 
-.chapter-indicator {
+.chapter-selector-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-secondary);
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+}
+
+.chapter-direct-input {
+    width: 50px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--accent-muted);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 2px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chapter-direct-input:focus {
+    border-bottom-color: var(--accent);
+}
+
+/* Remove arrows from number input */
+.chapter-direct-input::-webkit-inner-spin-button,
+.chapter-direct-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.chapter-count-label {
     color: var(--text-muted);
     font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* Header Controls */

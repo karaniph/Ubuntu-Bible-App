@@ -30,6 +30,7 @@ export default function FavoritesView({ onNavigateToBible }: FavoritesViewProps)
     const [topics, setTopics] = useState<Topic[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterTopicId, setFilterTopicId] = useState<number | 'all'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         async function loadData() {
@@ -49,9 +50,13 @@ export default function FavoritesView({ onNavigateToBible }: FavoritesViewProps)
         loadData();
     }, []);
 
-    const filteredHighlights = filterTopicId === 'all'
-        ? highlights
-        : highlights.filter(h => h.topic_id === filterTopicId);
+    const filteredHighlights = highlights.filter(h => {
+        const matchesTopic = filterTopicId === 'all' || h.topic_id === filterTopicId;
+        const matchesSearch = !searchQuery.trim() ||
+            (h.topic_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (h.text.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesTopic && matchesSearch;
+    });
 
     if (loading) return <div className="favorites-view loading">Loading your favorites...</div>;
 
@@ -60,6 +65,16 @@ export default function FavoritesView({ onNavigateToBible }: FavoritesViewProps)
             <header className="view-header">
                 <h1 className="view-title">Favorites & Topics 📚</h1>
                 <div className="filter-bar">
+                    <div className="search-wrapper">
+                        <span className="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search verses or categories..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="favorites-search-input"
+                        />
+                    </div>
                     <select
                         value={filterTopicId}
                         onChange={(e) => setFilterTopicId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
