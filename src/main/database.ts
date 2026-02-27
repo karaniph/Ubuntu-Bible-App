@@ -7,6 +7,33 @@ let db: Database.Database | null = null;
 let dbInitError: string | null = null;
 let activeDbPath: string | null = null;
 
+function isCorruptDatabaseError(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+    const msg = err.message.toLowerCase();
+    return msg.includes('database disk image is malformed')
+        || msg.includes('sqlite_corrupt')
+        || msg.includes('file is not a database');
+}
+
+async function copyDbAtomically(sourceDbPath: string, destDbPath: string) {
+    const tmpPath = `${destDbPath}.tmp`;
+    await fs.promises.mkdir(path.dirname(destDbPath), { recursive: true });
+    await fs.promises.copyFile(sourceDbPath, tmpPath);
+    await fs.promises.rename(tmpPath, destDbPath);
+}
+
+function openValidatedDatabase(dbPath: string): Database.Database {
+    const opened = new Database(dbPath, { readonly: false });
+    try {
+        // Lightweight sanity check to avoid expensive integrity scans at startup.
+        opened.prepare('SELECT name FROM sqlite_master LIMIT 1').get();
+        return opened;
+    } catch (err) {
+        opened.close();
+        throw err;
+    }
+}
+
 export interface ReflectionRow {
     id: number;
     day_key: string;
@@ -55,11 +82,25 @@ export async function initDatabase() {
         // 3. Sync DB if missing or in Dev (in dev we always want latest from source)
         if (!fs.existsSync(destDbPath) || isDev) {
             console.log('Copying database to writable location:', destDbPath);
-            await fs.promises.copyFile(sourceDbPath, destDbPath);
+            await copyDbAtomically(sourceDbPath, destDbPath);
         }
 
         // 4. Open from the writable location
-        db = new Database(destDbPath, { readonly: false });
+        try {
+            db = openValidatedDatabase(destDbPath);
+        } catch (openErr) {
+            if (!isCorruptDatabaseError(openErr)) {
+                throw openErr;
+            }
+            console.warn('Detected corrupt writable DB, restoring from source copy.');
+            if (fs.existsSync(destDbPath)) {
+                const corruptBackupPath = `${destDbPath}.corrupt-${Date.now()}`;
+                await fs.promises.rename(destDbPath, corruptBackupPath);
+                console.warn('Corrupt DB moved to:', corruptBackupPath);
+            }
+            await copyDbAtomically(sourceDbPath, destDbPath);
+            db = openValidatedDatabase(destDbPath);
+        }
         activeDbPath = destDbPath;
         dbInitError = null;
         console.log('Database connected at:', destDbPath);
