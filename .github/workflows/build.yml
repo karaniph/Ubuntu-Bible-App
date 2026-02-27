@@ -25,9 +25,30 @@ jobs:
     
     - name: Install dependencies
       run: npm ci
+
+    - name: Cache Electron binaries
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/electron
+          ~/.cache/electron-builder
+        key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-electron-
     
     - name: Build Electron app
-      run: npm run electron:build
+      run: |
+        for attempt in 1 2 3; do
+          echo "Build attempt $attempt/3"
+          if npm run electron:build; then
+            exit 0
+          fi
+          if [ "$attempt" -lt 3 ]; then
+            echo "Retrying after transient failure..."
+            sleep 10
+          fi
+        done
+        exit 1
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
