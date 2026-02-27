@@ -20,4 +20,62 @@
     flex: 1;
     overflow-y: auto;
     background: var(--bg-primary);
+    position: relative;
+}
+
+.startup-banner {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 8px 14px;
+    font-size: 0.86rem;
+}
+
+.db-fallback {
+    margin: 32px;
+    border: 1px solid rgba(220, 53, 69, 0.4);
+    background: rgba(220, 53, 69, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--text-primary);
+}
+
+.db-fallback h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.1rem;
+}
+
+.db-fallback p {
+    margin: 6px 0;
+    color: var(--text-secondary);
+}
+
+.view-loading {
+    padding: 24px;
+    color: var(--text-muted);
+}
+
+.toast-stack {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.toast-item {
+    max-width: 320px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 153, 0, 0.45);
+    border-radius: 10px;
+    background: #2e2513;
+    color: #ffd788;
+    font-size: 0.86rem;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
 }

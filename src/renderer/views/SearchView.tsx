@@ -14,6 +14,7 @@ interface Verse {
 
 interface SearchViewProps {
     onNavigateToBible: (target: NavigationTarget) => void;
+    onError?: (message: string) => void;
 }
 
 // Helper to map book codes or names to IDs if not returned by search
@@ -25,7 +26,7 @@ interface SearchViewProps {
 // Let's create a minimal map here too or importing it would be better.
 // For safety, let's ask Electron for the book ID or search returns it.
 
-export default function SearchView({ onNavigateToBible }: SearchViewProps) {
+export default function SearchView({ onNavigateToBible, onError }: SearchViewProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Verse[]>([]);
     const [loading, setLoading] = useState(false);
@@ -49,6 +50,7 @@ export default function SearchView({ onNavigateToBible }: SearchViewProps) {
                 setResults(verses);
             } catch (err) {
                 console.error('Search failed:', err);
+                onError?.('Search failed. Please try again.');
             }
             setLoading(false);
         }, 300);
@@ -76,17 +78,17 @@ export default function SearchView({ onNavigateToBible }: SearchViewProps) {
     };
 
     const handleResultClick = async (verse: Verse) => {
-        // We need the book ID. The current search API might not return it directly,
-        // but let's check. Use a lookup if needed. 
-        // Actually, let's just fetch all books once to map names to IDs.
-        const books = await window.electronAPI.getBooks();
-        const book = books.find((b: any) => b.name === verse.book_name || b.code === verse.book_code);
-
-        if (book) {
-            onNavigateToBible({
-                bookId: book.id,
-                chapter: verse.chapter
-            });
+        try {
+            const books = await window.electronAPI.getBooks();
+            const book = books.find((b: any) => b.name === verse.book_name || b.code === verse.book_code);
+            if (book) {
+                onNavigateToBible({
+                    bookId: book.id,
+                    chapter: verse.chapter
+                });
+            }
+        } catch {
+            onError?.('Could not open this verse in Bible view.');
         }
     };
 

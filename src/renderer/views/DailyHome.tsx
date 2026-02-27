@@ -4,6 +4,16 @@ import { NavigationTarget } from '../App';
 
 interface DailyHomeProps {
     onNavigateToBible: (target?: NavigationTarget) => void;
+    onError?: (message: string) => void;
+}
+
+interface ReflectionEntry {
+    id: number;
+    day_key: string;
+    date: string;
+    verse: string;
+    text: string;
+    updated_at?: string;
 }
 
 // Curated daily verses
@@ -28,11 +38,15 @@ const PROMPTS = [
     'How can you live this out today?',
 ];
 
-export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
+const LEGACY_REFLECTIONS_KEY = 'reflections';
+
+export default function DailyHome({ onNavigateToBible, onError }: DailyHomeProps) {
     const [dailyVerse, setDailyVerse] = useState(DAILY_VERSES[0]);
     const [prompt, setPrompt] = useState(PROMPTS[0]);
     const [reflection, setReflection] = useState('');
     const [saved, setSaved] = useState(false);
+    const [history, setHistory] = useState<ReflectionEntry[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(true);
 
     useEffect(() => {
         // Select verse based on day of year
@@ -40,25 +54,61 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
         setDailyVerse(DAILY_VERSES[dayOfYear % DAILY_VERSES.length]);
         setPrompt(PROMPTS[dayOfYear % PROMPTS.length]);
 
-        // Load any saved reflection for today
-        const savedReflections = JSON.parse(localStorage.getItem('reflections') || '[]');
-        const todayISO = new Date().toISOString().split('T')[0];
-        const todayReflection = savedReflections.find((r: any) => r.date.startsWith(todayISO));
-        if (todayReflection) {
-            setReflection(todayReflection.text);
-        }
-    }, []);
+        async function loadReflections() {
+            try {
+                const legacyRaw = localStorage.getItem(LEGACY_REFLECTIONS_KEY);
+                if (legacyRaw) {
+                    try {
+                        const legacyRows = JSON.parse(legacyRaw) as Array<{ date: string; verse: string; text: string }>;
+                        if (Array.isArray(legacyRows)) {
+                            for (const row of legacyRows) {
+                                if (row?.date && row?.verse && row?.text) {
+                                    await window.electronAPI.saveReflection(row.date, row.verse, row.text);
+                                }
+                            }
+                        }
+                        localStorage.removeItem(LEGACY_REFLECTIONS_KEY);
+                    } catch {
+                        // Ignore malformed legacy local storage payload.
+                    }
+                }
 
-    const handleSave = () => {
-        const savedReflections = JSON.parse(localStorage.getItem('reflections') || '[]');
-        savedReflections.push({
-            date: new Date().toISOString(),
-            verse: dailyVerse.ref,
-            text: reflection,
-        });
-        localStorage.setItem('reflections', JSON.stringify(savedReflections));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+                const savedReflections = await window.electronAPI.getReflections();
+                const todayISO = new Date().toISOString().split('T')[0];
+                const todayReflection = savedReflections.find((r: ReflectionEntry) => r.day_key === todayISO);
+                if (todayReflection) {
+                    setReflection(todayReflection.text);
+                }
+                setHistory(savedReflections);
+            } catch {
+                onError?.('Could not load saved reflections.');
+            } finally {
+                setLoadingHistory(false);
+            }
+        }
+
+        loadReflections();
+    }, [onError]);
+
+    const handleSave = async () => {
+        try {
+            const savedEntry = await window.electronAPI.saveReflection(new Date().toISOString(), dailyVerse.ref, reflection);
+            const nextHistory = [savedEntry, ...history.filter((entry) => entry.id !== savedEntry.id)];
+            setHistory(nextHistory.sort((a, b) => b.date.localeCompare(a.date)));
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch {
+            onError?.('Could not save reflection. Please try again.');
+        }
+    };
+
+    const handleDeleteReflection = async (entryId: number) => {
+        try {
+            await window.electronAPI.deleteReflection(entryId);
+            setHistory((prev) => prev.filter((entry) => entry.id !== entryId));
+        } catch {
+            onError?.('Could not delete reflection.');
+        }
     };
 
     return (
@@ -98,6 +148,34 @@ export default function DailyHome({ onNavigateToBible }: DailyHomeProps) {
                 <button className="read-chapter-button" onClick={() => onNavigateToBible()}>
                     📖 Read Full Bible
                 </button>
+
+                <section className="reflections-history">
+                    <h2>Saved Reflections</h2>
+                    {history.length === 0 ? (
+                        <p className="history-empty">{loadingHistory ? 'Loading reflections...' : 'No saved reflections yet.'}</p>
+                    ) : (
+                        <ul className="history-list">
+                            {history.map((entry) => (
+                                <li key={entry.id} className="history-item">
+                                    <div className="history-open-button" title="Load this reflection into editor">
+                                        <button className="history-content" onClick={() => setReflection(entry.text)}>
+                                            <span className="history-date">{new Date(entry.date).toLocaleDateString()}</span>
+                                            <span className="history-verse">{entry.verse}</span>
+                                            <span className="history-preview">{entry.text}</span>
+                                        </button>
+                                        <button
+                                            className="history-delete"
+                                            onClick={() => handleDeleteReflection(entry.id)}
+                                            aria-label="Delete reflection"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
             </div>
         </div>
     );

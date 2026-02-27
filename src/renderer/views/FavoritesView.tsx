@@ -23,9 +23,10 @@ interface Topic {
 
 interface FavoritesViewProps {
     onNavigateToBible: (target: { bookId: number; chapter: number }) => void;
+    onError?: (message: string) => void;
 }
 
-export default function FavoritesView({ onNavigateToBible }: FavoritesViewProps) {
+export default function FavoritesView({ onNavigateToBible, onError }: FavoritesViewProps) {
     const [highlights, setHighlights] = useState<Highlight[]>([]);
     const [topics, setTopics] = useState<Topic[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ export default function FavoritesView({ onNavigateToBible }: FavoritesViewProps)
                 setLoading(false);
             } catch (err) {
                 console.error('Failed to load favorites:', err);
+                onError?.('Could not load favorites.');
                 setLoading(false);
             }
         }

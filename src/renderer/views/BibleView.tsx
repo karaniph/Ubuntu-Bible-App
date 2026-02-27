@@ -29,9 +29,10 @@ interface Translation {
 interface BibleViewProps {
     initialTarget?: NavigationTarget | null;
     onTargetConsumed?: () => void;
+    onError?: (message: string) => void;
 }
 
-export default function BibleView({ initialTarget, onTargetConsumed }: BibleViewProps) {
+export default function BibleView({ initialTarget, onTargetConsumed, onError }: BibleViewProps) {
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
     const [verses, setVerses] = useState<Verse[]>([]);
@@ -119,6 +120,7 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
                 setLoading(false);
             } catch (err) {
                 console.error('Failed to load data:', err);
+                onError?.('Could not load Bible data.');
                 setLoading(false);
             }
         }
@@ -129,23 +131,31 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     useEffect(() => {
         async function loadChapterCount() {
             if (selectedBook && selectedTranslation > 0) {
-                const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
-                setChapterCount(count);
+                try {
+                    const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
+                    setChapterCount(count);
+                } catch {
+                    onError?.('Could not load chapter count.');
+                }
             }
         }
         loadChapterCount();
-    }, [selectedBook, selectedTranslation]);
+    }, [selectedBook, selectedTranslation, onError]);
 
     // Load verses when book/chapter/translation changes
     useEffect(() => {
         async function loadVerses() {
             if (selectedBook && selectedTranslation > 0) {
-                const v = await window.electronAPI.getVerses(selectedTranslation, selectedBook.id, selectedChapter);
-                setVerses(v);
+                try {
+                    const v = await window.electronAPI.getVerses(selectedTranslation, selectedBook.id, selectedChapter);
+                    setVerses(v);
+                } catch {
+                    onError?.('Could not load verses for this chapter.');
+                }
             }
         }
         loadVerses();
-    }, [selectedBook, selectedChapter, selectedTranslation]);
+    }, [selectedBook, selectedChapter, selectedTranslation, onError]);
 
     const handleContextMenu = (e: React.MouseEvent, verseId: number) => {
         e.preventDefault();
@@ -161,13 +171,16 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
     };
 
     const handleHighlight = async (verseId: number, color: string) => {
-        const resultColor = await window.electronAPI.toggleHighlight(verseId, color, selectedTopicId);
-        // Optimistic update
-        setVerses(prev => prev.map(v =>
-            v.id === verseId ? { ...v, color: resultColor || undefined, topic_id: selectedTopicId } : v
-        ));
-        setContextMenu(null);
-        setSelectedTopicId(undefined);
+        try {
+            const resultColor = await window.electronAPI.toggleHighlight(verseId, color, selectedTopicId);
+            setVerses(prev => prev.map(v =>
+                v.id === verseId ? { ...v, color: resultColor || undefined, topic_id: selectedTopicId } : v
+            ));
+            setContextMenu(null);
+            setSelectedTopicId(undefined);
+        } catch {
+            onError?.('Could not save highlight.');
+        }
     };
 
     // Close menu on click away
@@ -179,13 +192,17 @@ export default function BibleView({ initialTarget, onTargetConsumed }: BibleView
 
     const handleCreateTopic = async () => {
         if (!newTopicName.trim()) return;
-        const newId = await window.electronAPI.createTopic(newTopicName);
-        if (newId) {
-            const updatedTopics = await window.electronAPI.getTopics();
-            setTopics(updatedTopics);
-            setSelectedTopicId(Number(newId));
-            setNewTopicName('');
-            setIsAddingTopic(false);
+        try {
+            const newId = await window.electronAPI.createTopic(newTopicName);
+            if (newId) {
+                const updatedTopics = await window.electronAPI.getTopics();
+                setTopics(updatedTopics);
+                setSelectedTopicId(Number(newId));
+                setNewTopicName('');
+                setIsAddingTopic(false);
+            }
+        } catch {
+            onError?.('Could not create topic.');
         }
     };
 

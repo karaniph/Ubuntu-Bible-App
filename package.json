@@ -1,6 +1,6 @@
 {
     "name": "bible-app",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "description": "The Ultimate Offline Bible App for Study & Reflection",
     "main": "dist/main/main.js",
     "scripts": {
@@ -9,7 +9,7 @@
         "build:main": "tsc -p src/main/tsconfig.json",
         "build:renderer": "vite build",
         "preview": "vite preview",
-        "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+        "electron:dev": "NODE_ENV=development npm run build:main && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
         "electron:build": "npm run build:main && npm run build:renderer && electron-builder --linux snap"
     },
     "author": "karaniph",
@@ -36,9 +36,11 @@
     "build": {
         "appId": "org.bible.app",
         "productName": "Bible App",
+        "icon": "assets/icon.png",
         "linux": {
             "target": "snap",
-            "category": "Education"
+            "category": "Education",
+            "icon": "assets/icon.png"
         },
         "snap": {
             "confinement": "strict",
