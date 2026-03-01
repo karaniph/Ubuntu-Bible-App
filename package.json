@@ -50,7 +50,12 @@
                 "desktop-legacy",
                 "wayland",
                 "x11",
-                "opengl"
+                "opengl",
+                "unity7",
+                "network",
+                "network-bind",
+                "home",
+                "browser-support"
             ]
         },
         "files": [

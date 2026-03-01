@@ -2,6 +2,15 @@ import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus } from './database';
 
+const isSnapRuntime = Boolean(process.env.SNAP);
+
+if (isSnapRuntime) {
+    // Snap strict confinement commonly blocks Chromium shared memory and sandbox setup.
+    app.commandLine.appendSwitch('disable-dev-shm-usage');
+    app.commandLine.appendSwitch('no-sandbox');
+    app.disableHardwareAcceleration();
+}
+
 let mainWindow: BrowserWindow | null = null;
 let dbReadyResolve: (() => void) | null = null;
 const dbReady = new Promise<void>((resolve) => {
