@@ -1,6 +1,6 @@
 {
     "name": "bible-app",
-    "version": "1.7.2",
+    "version": "1.0.8",
     "description": "The Ultimate Offline Bible App for Study & Reflection",
     "main": "dist/main/main.js",
     "scripts": {
@@ -44,7 +44,15 @@
         },
         "snap": {
             "confinement": "strict",
-            "grade": "stable"
+            "grade": "stable",
+            "compression": "lzo",
+            "plugs": [
+                "desktop",
+                "desktop-legacy",
+                "wayland",
+                "x11",
+                "opengl"
+            ]
         },
         "files": [
             "dist/**/*",
