@@ -45,7 +45,6 @@
         "snap": {
             "confinement": "strict",
             "grade": "stable",
-            "compression": "lzo",
             "plugs": [
                 "desktop",
                 "desktop-legacy",
