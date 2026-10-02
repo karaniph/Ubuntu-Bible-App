@@ -98,6 +98,15 @@
     margin-top: 8px !important;
 }
 
+.privacy-link {
+    display: inline-block;
+    margin-top: 12px;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
 .support-button {
     display: inline-block;
     padding: 12px 24px;

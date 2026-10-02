@@ -294,7 +294,7 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                             onChange={(e) => setSelectedTranslation(Number(e.target.value))}
                         >
                             {translations.map((t) => (
-                                <option key={t.id} value={t.id}>{t.code}</option>
+                                <option key={t.id} value={t.id}>{t.name || t.code}</option>
                             ))}
                         </select>
                     </div>
@@ -312,7 +312,15 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                             >
                                 {verse.verse}
                             </sup>
-                            <span className="verse-text">{verse.text}</span>
+                            {verse.text.trim() ? (
+                                <span className="verse-text">{verse.text}</span>
+                            ) : (
+                                // Some translations (e.g. Darby) omit verses found in
+                                // other manuscripts, such as Matthew 23:14 and Acts 8:37.
+                                <span className="verse-text verse-omitted">
+                                    This verse is not included in this translation.
+                                </span>
+                            )}
                         </div>
                     ))}
                 </div>

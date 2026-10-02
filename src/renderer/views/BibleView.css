@@ -330,6 +330,11 @@
     font-size: 1.1rem;
     color: var(--text-primary);
 }
+.verse-text.verse-omitted {
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
 
 /* Chapter Navigation */
 .chapter-nav {

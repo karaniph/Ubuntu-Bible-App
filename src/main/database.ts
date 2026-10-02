@@ -34,6 +34,32 @@ function openValidatedDatabase(dbPath: string): Database.Database {
     }
 }
 
+// Display names keyed by translation code. Codes are left unchanged because
+// the renderer uses them (e.g. to pick KJV as the default translation).
+const TRANSLATION_NAMES: Record<string, string> = {
+    'ENG-KJV': 'King James Version (KJV)',
+    'ENG-ASV': 'American Standard Version (ASV)',
+    'ENGWEBP': 'World English Bible (WEB)',
+    'ENGWEBSTER': 'Webster Bible (WBT)',
+    'ENG-YLT': "Young's Literal Translation (YLT)",
+    'ENG-DBY': 'Darby Translation (DBY)',
+};
+
+function applyTranslationNames(database: Database.Database) {
+    const update = database.prepare('UPDATE translations SET name = ? WHERE code = ? AND name <> ?');
+    const tx = database.transaction(() => {
+        for (const [code, name] of Object.entries(TRANSLATION_NAMES)) {
+            update.run(name, code, name);
+        }
+    });
+    try {
+        tx();
+    } catch (err) {
+        // Cosmetic only; never block startup over display names.
+        console.warn('Could not apply translation display names:', err);
+    }
+}
+
 export interface ReflectionRow {
     id: number;
     day_key: string;
@@ -104,6 +130,10 @@ export async function initDatabase() {
         activeDbPath = destDbPath;
         dbInitError = null;
         console.log('Database connected at:', destDbPath);
+
+        // Readable translation names. Applied on every launch (idempotent) so
+        // existing installs, whose writable DB copy predates this fix, get them too.
+        applyTranslationNames(db);
 
         // 5. Initialize Schema
         db.prepare(`

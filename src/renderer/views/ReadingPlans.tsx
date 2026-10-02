@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import './ReadingPlans.css';
 import { NavigationTarget } from '../App';
 

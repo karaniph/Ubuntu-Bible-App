@@ -1,4 +1,3 @@
-import React from 'react';
 import './Sidebar.css';
 
 type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'settings';

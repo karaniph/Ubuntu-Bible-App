@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus } from './database';
 
@@ -10,6 +10,8 @@ if (isSnapRuntime) {
     app.commandLine.appendSwitch('no-sandbox');
     app.disableHardwareAcceleration();
 }
+// Windows Store (AppX) builds run as full-trust desktop apps; Chromium's
+// sandbox works normally there, so no extra switches are needed.
 
 let mainWindow: BrowserWindow | null = null;
 let dbReadyResolve: (() => void) | null = null;
@@ -63,6 +65,19 @@ function createWindow() {
 }
 
 function registerIpcHandlers() {
+    ipcMain.handle('app:openExternal', async (_, url: string) => {
+        // Only allow http(s) links to avoid the renderer triggering arbitrary
+        // protocol handlers (e.g. file:, javascript:) via this bridge.
+        let parsed: URL;
+        try {
+            parsed = new URL(url);
+        } catch {
+            return;
+        }
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            await shell.openExternal(parsed.toString());
+        }
+    });
     ipcMain.handle('db:getStatus', () => getDatabaseStatus());
     ipcMain.handle('db:waitUntilReady', async () => {
         await dbReady;

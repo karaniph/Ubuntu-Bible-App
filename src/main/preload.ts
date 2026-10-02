@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Expose safe APIs to renderer
 contextBridge.exposeInMainWorld('electronAPI', {
+    openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     getDatabaseStatus: () => ipcRenderer.invoke('db:getStatus'),
     waitUntilDatabaseReady: () => ipcRenderer.invoke('db:waitUntilReady'),
     // Bible database
@@ -37,6 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 declare global {
     interface Window {
         electronAPI: {
+            openExternal: (url: string) => Promise<void>;
             getDatabaseStatus: () => Promise<{ ready: boolean; error: string | null; path: string | null }>;
             waitUntilDatabaseReady: () => Promise<{ ready: boolean; error: string | null; path: string | null }>;
             getTranslations: () => Promise<Translation[]>;

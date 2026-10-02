@@ -11,7 +11,12 @@ const themes = [
     { id: 'sepia', label: 'Sepia', icon: '📜' },
 ] as const;
 
-export default function SettingsView({ theme, onThemeChange, onToast }: SettingsViewProps) {
+export default function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
+    const openLink = (url: string) => (e: React.MouseEvent) => {
+        e.preventDefault();
+        window.electronAPI.openExternal(url);
+    };
+
     return (
         <div className="settings-view">
             <h1 className="settings-title">Settings</h1>
@@ -41,10 +46,21 @@ export default function SettingsView({ theme, onThemeChange, onToast }: Settings
 
                 <div className="about-info">
                     <p><strong>Bible App</strong></p>
-                    <p className="version">Version 1.0.8</p>
+                    <p className="version">Version {__APP_VERSION__}</p>
                     <p className="description">
                         A peaceful companion for your spiritual journey.
                     </p>
+                    <p className="description">
+                        All your data (highlights, reflections, topics) stays on this device.
+                        Nothing is ever sent anywhere.
+                    </p>
+                    <a
+                        href="https://github.com/karaniph/Ubuntu-Bible-App/blob/master/PRIVACY.md"
+                        onClick={openLink('https://github.com/karaniph/Ubuntu-Bible-App/blob/master/PRIVACY.md')}
+                        className="privacy-link"
+                    >
+                        Privacy Policy
+                    </a>
                 </div>
             </section>
 
@@ -54,8 +70,7 @@ export default function SettingsView({ theme, onThemeChange, onToast }: Settings
 
                 <a
                     href="https://buymeacoffee.com/karaniph"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={openLink('https://buymeacoffee.com/karaniph')}
                     className="support-button"
                 >
                     ☕ Buy Me a Coffee

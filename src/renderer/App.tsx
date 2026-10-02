@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import DailyHome from './views/DailyHome';
 import BibleView from './views/BibleView';
@@ -103,7 +103,7 @@ export default function App() {
                     <div className="db-fallback">
                         <h2>Bible Library Unavailable</h2>
                         <p>{startupError || 'Database initialization failed.'}</p>
-                        <p>Please restart the app. If it persists, reinstall from a fresh snap build.</p>
+                        <p>Please restart the app. If it persists, reinstall Bible App from the store you got it from.</p>
                     </div>
                 ) : (
                     <Suspense fallback={<div className="view-loading">Loading view...</div>}>

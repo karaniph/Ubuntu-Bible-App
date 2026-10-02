@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './SearchView.css';
 import { NavigationTarget } from '../App';
 
@@ -26,11 +26,30 @@ interface SearchViewProps {
 // Let's create a minimal map here too or importing it would be better.
 // For safety, let's ask Electron for the book ID or search returns it.
 
+interface Translation {
+    id: number;
+    code: string;
+    name: string;
+}
+
 export default function SearchView({ onNavigateToBible, onError }: SearchViewProps) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Verse[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [translations, setTranslations] = useState<Translation[]>([]);
+    const [translationId, setTranslationId] = useState<number>(0);
+
+    // Load translations; default to KJV to match the Bible reader's default.
+    useEffect(() => {
+        window.electronAPI.getTranslations()
+            .then((trans) => {
+                setTranslations(trans);
+                const kjv = trans.find(t => t.code.includes('KJV') || t.name.includes('King James'));
+                setTranslationId(kjv ? kjv.id : (trans[0]?.id ?? 0));
+            })
+            .catch(() => onError?.('Could not load translations.'));
+    }, []);
 
     // Debounced search
     useEffect(() => {
@@ -38,7 +57,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
             clearTimeout(searchTimeout);
         }
 
-        if (query.trim().length < 2) {
+        if (query.trim().length < 2 || translationId === 0) {
             setResults([]);
             return;
         }
@@ -46,7 +65,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
         const timeout = setTimeout(async () => {
             setLoading(true);
             try {
-                const verses = await window.electronAPI.searchVerses(query, 1);
+                const verses = await window.electronAPI.searchVerses(query, translationId);
                 setResults(verses);
             } catch (err) {
                 console.error('Search failed:', err);
@@ -60,7 +79,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
         return () => {
             if (timeout) clearTimeout(timeout);
         };
-    }, [query]);
+    }, [query, translationId]);
 
     const highlightMatch = (text: string, searchTerm: string) => {
         if (!searchTerm.trim()) return text;
@@ -84,7 +103,9 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
             if (book) {
                 onNavigateToBible({
                     bookId: book.id,
-                    chapter: verse.chapter
+                    chapter: verse.chapter,
+                    // Open the reader in the same translation the result came from.
+                    translationId: translationId || undefined,
                 });
             }
         } catch {
@@ -96,14 +117,27 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
         <div className="search-view">
             <div className="search-header">
                 <h1 className="search-title">Search Scripture</h1>
-                <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Search for words, phrases, or verses..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    autoFocus
-                />
+                <div className="search-controls">
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search for words, phrases, or verses..."
+                        aria-label="Search scripture"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        autoFocus
+                    />
+                    <select
+                        className="search-translation-select"
+                        aria-label="Translation to search"
+                        value={translationId}
+                        onChange={(e) => setTranslationId(Number(e.target.value))}
+                    >
+                        {translations.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name || t.code}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             <div className="search-results">
