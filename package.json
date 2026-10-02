@@ -1,7 +1,7 @@
 {
     "name": "bible-app",
     "version": "1.0.8",
-    "description": "The Ultimate Offline Bible App for Study & Reflection",
+    "description": "The Ultimate Offline Bible App for Study and Reflection",
     "main": "dist/main/main.js",
     "scripts": {
         "dev": "vite",
