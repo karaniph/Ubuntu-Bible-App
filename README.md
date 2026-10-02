@@ -97,9 +97,11 @@ The CI publish step uses Microsoft's official Store CLI (`msstore`) and can only
 ### Store policy compliance notes
 
 - **10.5.1 Personal Information** — the app stores journal reflections/highlights locally in SQLite; nothing is transmitted. See [`PRIVACY.md`](./PRIVACY.md), linked from Settings → About inside the app, and must also be entered as the privacy policy URL in Partner Center.
-- **10.1.1 Accurate representation** — app name, icon, and description must match actual functionality (offline KJV/ASV/WEB Bible reader) — no changes needed here.
+- **10.1.1 Accurate representation** — app name, icon, and description must match actual functionality (offline Bible reader with 6 English translations).
 - **10.4.2 Usability** — app must start promptly and handle errors gracefully; the existing `startupState: 'error'` fallback in `App.tsx` already covers DB init failures.
-- **10.8** Financial transactions — not applicable; the app has no purchases, subscriptions, or in-app currency. The "Buy Me a Coffee" link opens an external browser page and does not process payments inside the app.
+- **10.8.2 Voluntary donations** — the app has no purchases, subscriptions, or in-app currency. "Buy Me a Coffee" is a voluntary tip that unlocks nothing, so the Microsoft Store purchase API isn't required. Tips go through Buy Me a Coffee (a secure third-party payment provider) in the user's own browser; the app never handles payment details.
+  - **At submission:** mention this in Partner Center's **Notes for certification**, e.g. "Optional 'Buy Me a Coffee' tip link opens buymeacoffee.com in the user's browser. Tips are voluntary and unlock no features or content."
+  - **Keep it that way:** if a tip ever unlocks anything (features, removing a prompt, extra content), Store policy requires switching to the Microsoft Store in-app purchase API.
 
 ### Version parity with the Snap
 

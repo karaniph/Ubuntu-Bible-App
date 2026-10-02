@@ -55,6 +55,20 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     }
 
+    // Web links (donations, privacy policy) must open in the user's browser, where
+    // they can see the real address, never in an app window without one.
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        void openInBrowser(url);
+        return { action: 'deny' };
+    });
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+        const isAppPage = url.startsWith('file://') || (isDev && url.startsWith('http://localhost:5173'));
+        if (!isAppPage) {
+            event.preventDefault();
+            void openInBrowser(url);
+        }
+    });
+
     mainWindow.once('ready-to-show', () => {
         mainWindow?.show();
     });
@@ -64,20 +78,22 @@ function createWindow() {
     });
 }
 
+// Opens http(s) links in the system browser. Other schemes (file:, javascript:,
+// custom protocol handlers) are ignored so a link can't launch arbitrary programs.
+async function openInBrowser(url: string) {
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return;
+    }
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        await shell.openExternal(parsed.toString());
+    }
+}
+
 function registerIpcHandlers() {
-    ipcMain.handle('app:openExternal', async (_, url: string) => {
-        // Only allow http(s) links to avoid the renderer triggering arbitrary
-        // protocol handlers (e.g. file:, javascript:) via this bridge.
-        let parsed: URL;
-        try {
-            parsed = new URL(url);
-        } catch {
-            return;
-        }
-        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-            await shell.openExternal(parsed.toString());
-        }
-    });
+    ipcMain.handle('app:openExternal', async (_, url: string) => openInBrowser(url));
     ipcMain.handle('db:getStatus', () => getDatabaseStatus());
     ipcMain.handle('db:waitUntilReady', async () => {
         await dbReady;

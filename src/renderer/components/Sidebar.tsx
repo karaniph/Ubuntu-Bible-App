@@ -38,8 +38,10 @@ export default function Sidebar({ currentView, onNavigate }: SidebarProps) {
             <div className="sidebar-footer">
                 <a
                     href="https://buymeacoffee.com/karaniph"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.electronAPI.openExternal('https://buymeacoffee.com/karaniph');
+                    }}
                     className="support-link"
                 >
                     ☕ Support
