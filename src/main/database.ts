@@ -261,13 +261,18 @@ export function searchVerses(query: string, translationId: number, limit: number
     if (!query.trim()) return [];
     const database = ensureDb();
     try {
-        // Preferred: Full Text Search
+        // Preferred: Full Text Search.
+        // CROSS JOIN forces SQLite to start from the FTS matches. Without it the
+        // planner walks every verse of the translation and probes the FTS index
+        // per row, which took ~10s and froze the window. ORDER BY v.id keeps the
+        // same Genesis-to-Revelation order the old plan produced.
         const stmt = database.prepare(`
       SELECT v.id, b.code as book_code, b.name as book_name, v.chapter, v.verse, v.text
       FROM verses_fts fts
-      JOIN verses v ON fts.rowid = v.id
+      CROSS JOIN verses v ON fts.rowid = v.id
       JOIN books b ON v.book_id = b.id
       WHERE verses_fts MATCH ? AND v.translation_id = ?
+      ORDER BY v.id
       LIMIT ?
     `);
         return stmt.all(query, translationId, limit);

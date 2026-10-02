@@ -24,15 +24,14 @@
         "concurrently": "^8.2.0",
         "electron": "^28.0.0",
         "electron-builder": "^24.9.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
         "typescript": "^5.3.0",
         "vite": "^5.0.0",
         "wait-on": "^7.2.0"
     },
     "dependencies": {
-        "better-sqlite3": "^9.2.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "react-router-dom": "^6.20.0"
+        "better-sqlite3": "^9.2.0"
     },
     "build": {
         "appId": "org.bible.app",
@@ -78,14 +77,19 @@
             "showNameOnTiles": true,
             "languages": ["en-US"]
         },
+        "electronLanguages": ["en-US"],
         "files": [
-            "dist/**/*",
-            "assets/**/*"
+            "dist/main/**/*",
+            "dist/renderer/**/*",
+            "!node_modules/better-sqlite3/deps/**",
+            "!node_modules/better-sqlite3/src/**",
+            "!node_modules/better-sqlite3/binding.gyp"
         ],
         "extraResources": [
             {
                 "from": "assets",
-                "to": "assets"
+                "to": "assets",
+                "filter": ["bible.db"]
             }
         ]
     }
