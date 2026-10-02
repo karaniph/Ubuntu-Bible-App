@@ -68,11 +68,11 @@
             "signingHashAlgorithms": ["sha256"]
         },
         "appx": {
-            "applicationId": "BibleApp",
-            "identityName": "karaniph.BibleApp",
-            "publisher": "CN=karaniph",
+            "applicationId": "DailyBibleStudyJournal",
+            "identityName": "karaniph.DailyBibleStudyJournal",
+            "publisher": "CN=4DDD2579-F44C-4B5D-909B-D1456E12C44F",
             "publisherDisplayName": "karaniph",
-            "displayName": "Bible App",
+            "displayName": "Daily Bible Study &amp; Journal",
             "backgroundColor": "#1a1a2e",
             "showNameOnTiles": true,
             "languages": ["en-US"]
