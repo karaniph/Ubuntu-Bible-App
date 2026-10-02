@@ -43,6 +43,8 @@ const TRANSLATION_NAMES: Record<string, string> = {
     'ENGWEBSTER': 'Webster Bible (WBT)',
     'ENG-YLT': "Young's Literal Translation (YLT)",
     'ENG-DBY': 'Darby Translation (DBY)',
+    // Only present in installs from the very first builds, alongside ENG-KJV.
+    'ENG-KJV2006': 'King James Version (earlier copy)',
 };
 
 function applyTranslationNames(database: Database.Database) {
@@ -57,6 +59,135 @@ function applyTranslationNames(database: Database.Database) {
     } catch (err) {
         // Cosmetic only; never block startup over display names.
         console.warn('Could not apply translation display names:', err);
+    }
+}
+
+function readTextVersion(database: Database.Database): number {
+    try {
+        const row = database.prepare("SELECT value FROM app_meta WHERE key = 'bible_text_version'").get() as { value: string } | undefined;
+        return row ? Number(row.value) || 1 : 1;
+    } catch {
+        return 1; // No app_meta table: install predates versioned Bible text.
+    }
+}
+
+/**
+ * Users keep their own copy of bible.db (it also holds their notes), so a new
+ * app version never replaces it. When the shipped Bible text is newer, copy the
+ * corrected verse text into the user's database:
+ *  - a full backup of the user's database is written first;
+ *  - everything runs in one transaction, so it either fully applies or not at all;
+ *  - verses are matched by translation code + book code + chapter + verse, and
+ *    existing verse ids are kept, so highlights stay attached to the same verse;
+ *  - highlights, topics and reflections are never read or written.
+ * On any failure the app keeps working with the old text.
+ */
+async function upgradeBibleText(database: Database.Database, sourceDbPath: string, destDbPath: string) {
+    let source: Database.Database | null = null;
+    try {
+        source = new Database(sourceDbPath, { readonly: true, fileMustExist: true });
+        const shippedVersion = readTextVersion(source);
+        const userVersion = readTextVersion(database);
+        if (shippedVersion <= userVersion) return;
+
+        const startedAt = Date.now();
+        console.log(`Upgrading Bible text from v${userVersion} to v${shippedVersion}`);
+        const backupPath = `${destDbPath}.before-bible-text-v${shippedVersion}`;
+        if (!fs.existsSync(backupPath)) {
+            // VACUUM INTO writes a complete, consistent copy in one step. Write to a
+            // temp name first so an interrupted backup never looks like a finished one.
+            const tmpBackup = `${backupPath}.tmp`;
+            await fs.promises.rm(tmpBackup, { force: true });
+            database.prepare('VACUUM INTO ?').run(tmpBackup);
+            await fs.promises.rename(tmpBackup, backupPath);
+            console.log('Backed up user database to:', backupPath);
+        }
+
+        const userBookId = new Map<string, number>();
+        for (const b of database.prepare('SELECT id, code FROM books').all() as { id: number; code: string }[]) {
+            userBookId.set(b.code, b.id);
+        }
+        const userTranslationId = new Map<string, number>();
+        for (const t of database.prepare('SELECT id, code FROM translations').all() as { id: number; code: string }[]) {
+            userTranslationId.set(t.code, t.id);
+        }
+
+        const insertTranslation = database.prepare('INSERT INTO translations (code, name) VALUES (?, ?)');
+        const updateVerse = database.prepare(
+            'UPDATE verses SET text = ? WHERE translation_id = ? AND book_id = ? AND chapter = ? AND verse = ? AND text <> ?'
+        );
+        const verseExists = database.prepare(
+            'SELECT 1 FROM verses WHERE translation_id = ? AND book_id = ? AND chapter = ? AND verse = ? LIMIT 1'
+        );
+        const insertVerse = database.prepare(
+            'INSERT INTO verses (translation_id, book_id, chapter, verse, text) VALUES (?, ?, ?, ?, ?)'
+        );
+        const hasFts = !!database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'verses_fts'").get();
+
+        const shippedVerses = source.prepare(`
+            SELECT t.code AS tcode, b.code AS bcode, v.chapter, v.verse, v.text
+            FROM verses v JOIN translations t ON t.id = v.translation_id JOIN books b ON b.id = v.book_id
+        `);
+
+        // The search-index triggers would re-index every changed verse one by one,
+        // which made this take minutes. Drop them for the bulk update, rebuild the
+        // index once, then restore them exactly as they were (all in the transaction).
+        const verseTriggers = database
+            .prepare("SELECT name, sql FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'verses' AND sql IS NOT NULL")
+            .all() as { name: string; sql: string }[];
+
+        // Extra user translations that should receive another translation's text.
+        const aliasTargets = new Map<string, number[]>();
+        let updated = 0;
+        let inserted = 0;
+        const apply = database.transaction(() => {
+            // Builds from January 2026 stored the King James text under code
+            // ENG-KJV2006. Treat it as the KJV so its text gets corrected in place
+            // (keeping highlights on it) instead of adding a second KJV next to it.
+            if (userTranslationId.has('ENG-KJV2006')) {
+                if (!userTranslationId.has('ENG-KJV')) {
+                    database.prepare("UPDATE translations SET code = 'ENG-KJV' WHERE code = 'ENG-KJV2006'").run();
+                    userTranslationId.set('ENG-KJV', userTranslationId.get('ENG-KJV2006')!);
+                    userTranslationId.delete('ENG-KJV2006');
+                } else {
+                    aliasTargets.set('ENG-KJV', [userTranslationId.get('ENG-KJV2006')!]);
+                }
+            }
+            for (const t of verseTriggers) database.exec(`DROP TRIGGER IF EXISTS "${t.name.replace(/"/g, '""')}"`);
+            database.prepare('CREATE INDEX IF NOT EXISTS idx_verses_lookup ON verses(translation_id, book_id, chapter, verse)').run();
+            for (const t of source!.prepare('SELECT code, name FROM translations').all() as { code: string; name: string }[]) {
+                if (!userTranslationId.has(t.code)) {
+                    userTranslationId.set(t.code, Number(insertTranslation.run(t.code, t.name).lastInsertRowid));
+                }
+            }
+            for (const row of shippedVerses.iterate() as IterableIterator<{ tcode: string; bcode: string; chapter: number; verse: number; text: string }>) {
+                const tid = userTranslationId.get(row.tcode);
+                const bid = userBookId.get(row.bcode);
+                if (tid === undefined || bid === undefined) continue;
+                for (const target of [tid, ...(aliasTargets.get(row.tcode) ?? [])]) {
+                    const res = updateVerse.run(row.text, target, bid, row.chapter, row.verse, row.text);
+                    if (res.changes > 0) {
+                        updated += res.changes;
+                    } else if (!verseExists.get(target, bid, row.chapter, row.verse)) {
+                        insertVerse.run(target, bid, row.chapter, row.verse, row.text);
+                        inserted++;
+                    }
+                }
+            }
+            if (hasFts) {
+                // Re-index search once so it matches the corrected text.
+                database.prepare("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')").run();
+            }
+            for (const t of verseTriggers) database.exec(t.sql);
+            database.prepare('CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
+            database.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('bible_text_version', ?)").run(String(shippedVersion));
+        });
+        apply();
+        console.log(`Bible text upgraded: ${updated} verses corrected, ${inserted} verses added in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
+    } catch (err) {
+        console.error('Bible text upgrade failed; keeping existing text:', err);
+    } finally {
+        source?.close();
     }
 }
 
@@ -130,6 +261,10 @@ export async function initDatabase() {
         activeDbPath = destDbPath;
         dbInitError = null;
         console.log('Database connected at:', destDbPath);
+
+        // Bring Bible text in older installs up to the shipped version. Only
+        // translations/verses are touched; highlights, topics and reflections are not.
+        await upgradeBibleText(db, sourceDbPath, destDbPath);
 
         // Readable translation names. Applied on every launch (idempotent) so
         // existing installs, whose writable DB copy predates this fix, get them too.
