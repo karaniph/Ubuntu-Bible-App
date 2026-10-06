@@ -4,6 +4,16 @@ import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getCh
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
+if (process.platform === 'linux') {
+    // On a Wayland session (the default on Ubuntu 25.10+, recent Fedora, etc.)
+    // Electron otherwise falls back to XWayland, where keyboard input often
+    // never reaches the window — the app looks frozen and you can't type.
+    // "auto" picks Wayland on a Wayland session and X11 everywhere else, so it
+    // is safe for X11 users too. Must be set before app "ready".
+    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations');
+}
+
 if (isSnapRuntime) {
     // Snap strict confinement commonly blocks Chromium shared memory and sandbox setup.
     app.commandLine.appendSwitch('disable-dev-shm-usage');
