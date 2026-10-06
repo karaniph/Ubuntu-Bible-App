@@ -4,14 +4,14 @@ import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getCh
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
-if (process.platform === 'linux') {
-    // On a Wayland session (the default on Ubuntu 25.10+, recent Fedora, etc.)
-    // Electron otherwise falls back to XWayland, where keyboard input often
-    // never reaches the window — the app looks frozen and you can't type.
-    // "auto" picks Wayland on a Wayland session and X11 everywhere else, so it
-    // is safe for X11 users too. Must be set before app "ready".
-    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-    app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations');
+if (process.platform === 'linux' && !process.env.GTK_IM_MODULE) {
+    // On GNOME/Wayland sessions (default on Ubuntu 25.10+) the GTK ibus input
+    // module fails to deliver keystrokes to the Electron window inside snap
+    // confinement — the app looks frozen and you cannot type anywhere.
+    // Forcing the simple built-in "xim" input module restores keyboard input.
+    // Only set when the user has not chosen an input module themselves, so we
+    // never override a working ibus/fcitx setup (e.g. non-Latin input).
+    process.env.GTK_IM_MODULE = 'xim';
 }
 
 if (isSnapRuntime) {
