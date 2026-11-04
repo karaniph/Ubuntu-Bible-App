@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { app } from 'electron';
 
 let db: Database.Database | null = null;
@@ -43,6 +44,7 @@ const TRANSLATION_NAMES: Record<string, string> = {
     'ENGWEBSTER': 'Webster Bible (WBT)',
     'ENG-YLT': "Young's Literal Translation (YLT)",
     'ENG-DBY': 'Darby Translation (DBY)',
+    'ENG-BSB': 'Berean Standard Bible (BSB)',
     // Only present in installs from the very first builds, alongside ENG-KJV.
     'ENG-KJV2006': 'King James Version (earlier copy)',
 };
@@ -71,6 +73,28 @@ function readTextVersion(database: Database.Database): number {
     }
 }
 
+// Tables holding the user's own data. upgradeBibleText must leave them exactly as they were.
+const USER_DATA_TABLES = ['topics', 'highlights', 'reflections'];
+
+/**
+ * SHA-256 over a full dump of the user's topics, highlights and reflections (every column of
+ * every row, in rowid order). Tables that do not exist yet are skipped. Must be called inside
+ * the upgrade transaction, before and after the work, so a difference rolls everything back.
+ */
+function userDataChecksum(database: Database.Database): string {
+    const hash = crypto.createHash('sha256');
+    for (const table of USER_DATA_TABLES) {
+        const exists = database.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
+        hash.update(`#${table}:${exists ? 'present' : 'absent'}\n`);
+        if (!exists) continue;
+        for (const row of database.prepare(`SELECT * FROM "${table}" ORDER BY rowid`).iterate()) {
+            hash.update(JSON.stringify(row));
+            hash.update('\n');
+        }
+    }
+    return hash.digest('hex');
+}
+
 /**
  * Users keep their own copy of bible.db (it also holds their notes), so a new
  * app version never replaces it. When the shipped Bible text is newer, copy the
@@ -79,7 +103,11 @@ function readTextVersion(database: Database.Database): number {
  *  - everything runs in one transaction, so it either fully applies or not at all;
  *  - verses are matched by translation code + book code + chapter + verse, and
  *    existing verse ids are kept, so highlights stay attached to the same verse;
- *  - highlights, topics and reflections are never read or written.
+ *  - highlights, topics and reflections are never written; a checksum of all three, taken
+ *    inside the transaction before and after, must match or the transaction is rolled back.
+ *  - installs already at text version 2 have correct text for the translations they own, so
+ *    they only receive translations they are missing (e.g. the BSB) instead of re-processing
+ *    every verse. Installs at version 1 (damaged text) get the full in-place repair.
  * On any failure the app keeps working with the old text.
  */
 async function upgradeBibleText(database: Database.Database, sourceDbPath: string, destDbPath: string) {
@@ -90,6 +118,8 @@ async function upgradeBibleText(database: Database.Database, sourceDbPath: strin
         const userVersion = readTextVersion(database);
         if (shippedVersion <= userVersion) return;
 
+        // Version 2 text is already corrected; only add what the user does not have yet.
+        const repairExistingText = userVersion < 2;
         const startedAt = Date.now();
         console.log(`Upgrading Bible text from v${userVersion} to v${shippedVersion}`);
         const backupPath = `${destDbPath}.before-bible-text-v${shippedVersion}`;
@@ -124,9 +154,19 @@ async function upgradeBibleText(database: Database.Database, sourceDbPath: strin
         );
         const hasFts = !!database.prepare("SELECT 1 FROM sqlite_master WHERE name = 'verses_fts'").get();
 
+        const missingTranslationCodes = new Set(
+            (source.prepare('SELECT code FROM translations').all() as { code: string }[])
+                .map((t) => t.code)
+                .filter((code) => !userTranslationId.has(code))
+        );
+        // Version 2 installs only need the verses of translations they lack, so don't even read the rest.
+        const onlyMissing = !repairExistingText;
+        const missingCodes = [...missingTranslationCodes];
         const shippedVerses = source.prepare(`
             SELECT t.code AS tcode, b.code AS bcode, v.chapter, v.verse, v.text
             FROM verses v JOIN translations t ON t.id = v.translation_id JOIN books b ON b.id = v.book_id
+            ${onlyMissing ? `WHERE t.code IN (${missingCodes.map(() => '?').join(',') || "''"})` : ''}
+            ORDER BY v.id
         `);
 
         // The search-index triggers would re-index every changed verse one by one,
@@ -141,6 +181,7 @@ async function upgradeBibleText(database: Database.Database, sourceDbPath: strin
         let updated = 0;
         let inserted = 0;
         const apply = database.transaction(() => {
+            const userDataBefore = userDataChecksum(database);
             // Builds from January 2026 stored the King James text under code
             // ENG-KJV2006. Treat it as the KJV so its text gets corrected in place
             // (keeping highlights on it) instead of adding a second KJV next to it.
@@ -160,7 +201,7 @@ async function upgradeBibleText(database: Database.Database, sourceDbPath: strin
                     userTranslationId.set(t.code, Number(insertTranslation.run(t.code, t.name).lastInsertRowid));
                 }
             }
-            for (const row of shippedVerses.iterate() as IterableIterator<{ tcode: string; bcode: string; chapter: number; verse: number; text: string }>) {
+            for (const row of shippedVerses.iterate(...(onlyMissing ? missingCodes : [])) as IterableIterator<{ tcode: string; bcode: string; chapter: number; verse: number; text: string }>) {
                 const tid = userTranslationId.get(row.tcode);
                 const bid = userBookId.get(row.bcode);
                 if (tid === undefined || bid === undefined) continue;
@@ -174,13 +215,20 @@ async function upgradeBibleText(database: Database.Database, sourceDbPath: strin
                     }
                 }
             }
-            if (hasFts) {
+            if (hasFts && repairExistingText) {
                 // Re-index search once so it matches the corrected text.
                 database.prepare("INSERT INTO verses_fts(verses_fts) VALUES('rebuild')").run();
+            } else if (hasFts) {
+                // Only new translations were added: index just those rows, in one statement.
+                const indexNew = database.prepare('INSERT INTO verses_fts(rowid, text) SELECT id, text FROM verses WHERE translation_id = ?');
+                for (const code of missingTranslationCodes) indexNew.run(userTranslationId.get(code));
             }
             for (const t of verseTriggers) database.exec(t.sql);
             database.prepare('CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
             database.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('bible_text_version', ?)").run(String(shippedVersion));
+            if (userDataChecksum(database) !== userDataBefore) {
+                throw new Error('Topics, highlights or reflections changed during the Bible text upgrade; rolling back');
+            }
         });
         apply();
         console.log(`Bible text upgraded: ${updated} verses corrected, ${inserted} verses added in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
