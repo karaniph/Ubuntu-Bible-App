@@ -29,6 +29,8 @@ Bible App does not share, sell, or transmit any user data to third parties, adve
 
 The App contains links (for example, this Privacy Policy and an optional "Buy Me a Coffee" support page) that open in your web browser. Those websites have their own privacy policies. The App does not send any of your data to them.
 
+The "Daily Scripture Shop" screen links to an Amazon storefront. The link opens in your web browser; the App itself sends no data and makes no network requests for it. Amazon's own privacy policy applies on its site.
+
 ## 5. Deleting Your Data
 
 - **Windows (Microsoft Store):** uninstalling the App removes its application data, including all highlights, topics, reflections, and reading plan progress.

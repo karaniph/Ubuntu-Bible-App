@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import DailyHome from './views/DailyHome';
 import BibleView from './views/BibleView';
 import SettingsView from './views/SettingsView';
+import StoreView from './views/StoreView';
 import './styles/app.css';
 import type { Topic } from '../main/preload';
 import { AppSettings, loadSettings, saveSettings } from './lib/storage';
@@ -12,7 +13,7 @@ const SearchView = lazy(() => import('./views/SearchView'));
 const FavoritesView = lazy(() => import('./views/FavoritesView'));
 const ReadingPlans = lazy(() => import('./views/ReadingPlans'));
 
-type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'settings';
+type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'store' | 'settings';
 
 export interface NavigationTarget {
     bookId?: number;
@@ -99,6 +100,8 @@ export default function App() {
                 return <FavoritesView onNavigateToBible={handleNavigateToBible} onError={showToast} />;
             case 'plans':
                 return <ReadingPlans onNavigateToBible={handleNavigateToBible} onError={showToast} />;
+            case 'store':
+                return <StoreView />;
             case 'settings':
                 return <SettingsView settings={settings} onSettingsChange={updateSettings} onToast={showToast} />;
             default:

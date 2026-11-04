@@ -13,6 +13,7 @@ The Ultimate Offline Bible App for Study & Reflection — built with Electron + 
 - 🔖 **Remembers Where You Left Off** — Reopens at your last book, chapter, translation and theme
 - 📋 **Copy Verse** — Right-click a verse to copy it with its reference, e.g. “…” John 3:16 (KJV)
 - 📄 **Cleaner Reading Mode** — Paragraph breaks instead of ¶ symbols, optional verse numbers, and a paragraph layout like a printed Bible
+- 🛒 **Daily Scripture Shop** — Sidebar link to a storefront of spiritual books and journals; opens in your browser, the app sends no data
 - ✍️ **Journaling** — Write reflections on verses
 - 🛡️ **Private** — All data stays on your device
 

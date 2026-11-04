@@ -1,6 +1,6 @@
 import './Sidebar.css';
 
-type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'settings';
+type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'store' | 'settings';
 
 interface SidebarProps {
     currentView: View;
@@ -13,6 +13,7 @@ const navItems: { view: View; label: string; icon: string }[] = [
     { view: 'favorites', label: 'Favorites', icon: '⭐' },
     { view: 'search', label: 'Search', icon: '🔍' },
     { view: 'plans', label: 'Plans', icon: '📚' },
+    { view: 'store', label: 'Daily Scripture Shop', icon: '🛒' },
     { view: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
