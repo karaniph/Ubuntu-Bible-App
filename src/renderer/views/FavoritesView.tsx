@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './FavoritesView.css';
+import { stripPilcrow } from '../lib/storage';
 
 interface Highlight {
     id: number;
@@ -106,7 +107,7 @@ export default function FavoritesView({ onNavigateToBible, onError }: FavoritesV
                                 <span className="reference">{h.book_name} {h.chapter}:{h.verse}</span>
                                 {h.topic_name && <span className="topic-badge">{h.topic_name}</span>}
                             </div>
-                            <p className="verse-preview">"{h.text}"</p>
+                            <p className="verse-preview">"{stripPilcrow(h.text)}"</p>
                             <div className="card-footer">
                                 <span className="jump-link">Jump to chapter →</span>
                             </div>

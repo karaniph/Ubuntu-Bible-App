@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './SearchView.css';
 import { NavigationTarget } from '../App';
 import { BookLike, buildBookLookup, formatReference, parseReference } from '../lib/reference';
-import { loadLastRead } from '../lib/storage';
+import { loadLastRead, stripPilcrow } from '../lib/storage';
 
 interface Verse {
     id: number;
@@ -233,7 +233,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
                                 {verse.book_name} {verse.chapter}:{verse.verse}
                             </p>
                             <p className="result-text">
-                                {highlightMatch(verse.text, query)}
+                                {highlightMatch(stripPilcrow(verse.text), query)}
                             </p>
                         </li>
                     ))}
