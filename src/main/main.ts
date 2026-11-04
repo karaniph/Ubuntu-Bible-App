@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus } from './database';
 
@@ -104,6 +104,13 @@ async function openInBrowser(url: string) {
 
 function registerIpcHandlers() {
     ipcMain.handle('app:openExternal', async (_, url: string) => openInBrowser(url));
+    // Plain-text clipboard bridge for "Copy verse". Only non-empty strings of a
+    // sane size are accepted; nothing else can be written from the renderer.
+    ipcMain.handle('app:copyText', (_, text: unknown) => {
+        if (typeof text !== 'string' || text.length === 0 || text.length > 20000) return false;
+        clipboard.writeText(text);
+        return true;
+    });
     ipcMain.handle('db:getStatus', () => getDatabaseStatus());
     ipcMain.handle('db:waitUntilReady', async () => {
         await dbReady;

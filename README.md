@@ -8,6 +8,11 @@ The Ultimate Offline Bible App for Study & Reflection — built with Electron + 
 - 📖 **Offline Bible** — 6 English translations included: King James Version (KJV), American Standard Version (ASV), World English Bible (WEB), Webster Bible (WBT), Young's Literal Translation (YLT), and Darby Translation (DBY)
 - 🔍 **Instant Search** — Find any verse in milliseconds
 - 🎨 **Beautiful Themes** — Light, Dark, and Sepia modes
+- 🎯 **Verse Jump** — Type a reference like `John 3:16`, `1 cor 13:4` or `Psalm 23` in Search and press Enter; the verse opens centered with a soft highlight that fades away
+- 🔠 **Text Size & Line Spacing** — Adjust reader text size and spacing in Settings
+- 🔖 **Remembers Where You Left Off** — Reopens at your last book, chapter, translation and theme
+- 📋 **Copy Verse** — Right-click a verse to copy it with its reference, e.g. “…” John 3:16 (KJV)
+- 📄 **Cleaner Reading Mode** — Paragraph breaks instead of ¶ symbols, optional verse numbers, and a paragraph layout like a printed Bible
 - ✍️ **Journaling** — Write reflections on verses
 - 🛡️ **Private** — All data stays on your device
 

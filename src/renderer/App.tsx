@@ -5,6 +5,7 @@ import BibleView from './views/BibleView';
 import SettingsView from './views/SettingsView';
 import './styles/app.css';
 import type { Topic } from '../main/preload';
+import { AppSettings, loadSettings, saveSettings } from './lib/storage';
 
 export type { Topic };
 const SearchView = lazy(() => import('./views/SearchView'));
@@ -17,11 +18,22 @@ export interface NavigationTarget {
     bookId?: number;
     chapter?: number;
     translationId?: number;
+    verse?: number; // optional verse (or first verse of a range) to focus
+    verseEnd?: number; // optional last verse of a range
 }
 
 export default function App() {
     const [currentView, setCurrentView] = useState<View>('daily');
-    const [theme, setTheme] = useState<'light' | 'dark' | 'sepia'>('light');
+    const [settings, setSettings] = useState<AppSettings>(loadSettings);
+    const theme = settings.theme;
+
+    const updateSettings = (patch: Partial<AppSettings>) => {
+        setSettings((prev) => {
+            const next = { ...prev, ...patch };
+            saveSettings(next);
+            return next;
+        });
+    };
     const [startupState, setStartupState] = useState<'loading' | 'ready' | 'error'>('loading');
     const [startupError, setStartupError] = useState<string | null>(null);
     const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
@@ -77,6 +89,8 @@ export default function App() {
                         initialTarget={navTarget}
                         onTargetConsumed={() => setNavTarget(null)}
                         onError={showToast}
+                        onToast={showToast}
+                        settings={settings}
                     />
                 );
             case 'search':
@@ -86,7 +100,7 @@ export default function App() {
             case 'plans':
                 return <ReadingPlans onNavigateToBible={handleNavigateToBible} onError={showToast} />;
             case 'settings':
-                return <SettingsView theme={theme} onThemeChange={setTheme} onToast={showToast} />;
+                return <SettingsView settings={settings} onSettingsChange={updateSettings} onToast={showToast} />;
             default:
                 return <DailyHome onNavigateToBible={() => handleNavigateToBible()} onError={showToast} />;
         }

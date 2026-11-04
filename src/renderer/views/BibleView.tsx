@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './BibleView.css';
 import { NavigationTarget, Topic } from '../App';
+import {
+    AppSettings, LINE_HEIGHTS, TEXT_SIZES,
+    loadLastRead, saveLastRead, stripPilcrow, translationLabel,
+} from '../lib/storage';
 
 interface Book {
     id: number;
@@ -30,9 +34,11 @@ interface BibleViewProps {
     initialTarget?: NavigationTarget | null;
     onTargetConsumed?: () => void;
     onError?: (message: string) => void;
+    onToast?: (message: string) => void;
+    settings: AppSettings;
 }
 
-export default function BibleView({ initialTarget, onTargetConsumed, onError }: BibleViewProps) {
+export default function BibleView({ initialTarget, onTargetConsumed, onError, onToast, settings }: BibleViewProps) {
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
     const [verses, setVerses] = useState<Verse[]>([]);
@@ -42,6 +48,12 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
     const [tempChapterValue, setTempChapterValue] = useState<string>('1');
     const [chapterCount, setChapterCount] = useState<number>(1);
     const [loading, setLoading] = useState(true);
+    // Temporary "you jumped here" highlight. UI only: never saved anywhere.
+    const [focus, setFocus] = useState<{ bookId: number; chapter: number; start: number; end: number; nonce: number } | null>(null);
+    const focusNonce = useRef(0);
+    const focusHandled = useRef(0);
+    const focusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (focusTimer.current) clearTimeout(focusTimer.current); }, []);
 
     // Sync temp value when chapter changes externally (e.g. Next/Prev buttons)
     useEffect(() => {
@@ -83,9 +95,11 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
 
                 // Set default translation to KJV if available, otherwise first available
                 let currentTranslationId = selectedTranslation;
+                const lastRead = loadLastRead();
                 if (currentTranslationId === 0 && trans.length > 0) {
+                    const remembered = lastRead && trans.find(t => t.id === lastRead.translationId);
                     const kjv = trans.find(t => t.code.includes('KJV') || t.name.includes('King James'));
-                    currentTranslationId = kjv ? kjv.id : trans[0].id;
+                    currentTranslationId = remembered ? remembered.id : kjv ? kjv.id : trans[0].id;
                     setSelectedTranslation(currentTranslationId);
                 }
 
@@ -100,6 +114,17 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                     if (targetBook) {
                         setSelectedBook(targetBook);
                         if (initialTarget.chapter) setSelectedChapter(initialTarget.chapter);
+                        if (initialTarget.verse) {
+                            focusNonce.current += 1;
+                            setFocus({
+                                bookId: targetBook.id,
+                                chapter: initialTarget.chapter || 1,
+                                start: initialTarget.verse,
+                                end: initialTarget.verseEnd && initialTarget.verseEnd > initialTarget.verse
+                                    ? initialTarget.verseEnd : initialTarget.verse,
+                                nonce: focusNonce.current,
+                            });
+                        }
                     } else if (!selectedBook) {
                         setSelectedBook(bks[0]);
                     }
@@ -114,7 +139,10 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                     // Clear the target so it doesn't re-trigger
                     if (onTargetConsumed) onTargetConsumed();
                 } else if (!selectedBook && bks.length > 0) {
-                    setSelectedBook(bks[0]);
+                    // Reopen where the user left off; fresh installs get Genesis 1.
+                    const savedBook = lastRead?.bookId ? bks.find(b => b.id === lastRead.bookId) : undefined;
+                    setSelectedBook(savedBook || bks[0]);
+                    if (savedBook && lastRead?.chapter) setSelectedChapter(lastRead.chapter);
                 }
 
                 setLoading(false);
@@ -134,6 +162,8 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                 try {
                     const count = await window.electronAPI.getChapterCount(selectedBook.id, selectedTranslation);
                     setChapterCount(count);
+                    // A remembered chapter may not exist in this translation.
+                    if (count > 0) setSelectedChapter((c) => Math.min(c, count));
                 } catch {
                     onError?.('Could not load chapter count.');
                 }
@@ -156,6 +186,58 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
         }
         loadVerses();
     }, [selectedBook, selectedChapter, selectedTranslation, onError]);
+
+    // Remember the reading position (display preferences live in App settings).
+    useEffect(() => {
+        if (!loading && selectedBook && selectedTranslation > 0) {
+            saveLastRead({ translationId: selectedTranslation, bookId: selectedBook.id, chapter: selectedChapter });
+        }
+    }, [loading, selectedBook, selectedChapter, selectedTranslation]);
+
+    // Scroll the jumped-to verse(s) into view once the right chapter is loaded,
+    // then let the soft highlight fade away.
+    useEffect(() => {
+        if (!focus || focus.nonce === focusHandled.current) return;
+        if (!selectedBook || selectedBook.id !== focus.bookId || selectedChapter !== focus.chapter) return;
+        if (!verses.some(v => v.chapter === focus.chapter && v.verse === focus.start && v.book_code === selectedBook.code)) return;
+        focusHandled.current = focus.nonce;
+        const el = document.getElementById(`verse-${focus.start}`);
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        if (focusTimer.current) clearTimeout(focusTimer.current);
+        focusTimer.current = setTimeout(() => setFocus(null), 3200);
+    }, [focus, verses, selectedBook, selectedChapter]);
+
+    const isFocused = (verse: Verse) =>
+        !!focus && !!selectedBook && focus.bookId === selectedBook.id && focus.chapter === selectedChapter &&
+        verse.verse >= focus.start && verse.verse <= focus.end;
+
+    const handleCopy = async (verseId: number) => {
+        setContextMenu(null);
+        const verse = verses.find(v => v.id === verseId);
+        const clean = verse ? stripPilcrow(verse.text) : '';
+        if (!verse || !clean) {
+            onError?.('Nothing to copy for this verse.');
+            return;
+        }
+        const code = translations.find(t => t.id === selectedTranslation)?.code ?? '';
+        const text = `\u201C${clean}\u201D ${verse.book_name} ${verse.chapter}:${verse.verse} (${translationLabel(code)})`;
+        let ok = false;
+        try {
+            ok = await window.electronAPI.copyText(text);
+        } catch {
+            ok = false;
+        }
+        if (!ok) {
+            try {
+                await navigator.clipboard.writeText(text);
+                ok = true;
+            } catch {
+                ok = false;
+            }
+        }
+        if (ok) onToast?.('Copied');
+        else onError?.('Could not copy the verse.');
+    };
 
     const handleContextMenu = (e: React.MouseEvent, verseId: number) => {
         e.preventDefault();
@@ -206,6 +288,46 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
         }
     };
 
+    // A pilcrow (¶) at the start of a verse marks a paragraph start.
+    const paragraphs: Verse[][] = [];
+    for (const verse of verses) {
+        if (paragraphs.length === 0 || verse.text.trimStart().startsWith('¶')) paragraphs.push([]);
+        paragraphs[paragraphs.length - 1].push(verse);
+    }
+
+    const renderVerse = (verse: Verse, inline: boolean) => {
+        const text = stripPilcrow(verse.text);
+        const startsParagraph = verse.text.trimStart().startsWith('¶');
+        const Row = inline ? 'span' : 'div';
+        return (
+            <Row
+                key={verse.id}
+                id={`verse-${verse.verse}`}
+                className={[
+                    'verse-row',
+                    inline ? 'verse-inline' : '',
+                    startsParagraph && !inline ? 'paragraph-start' : '',
+                    verse.color ? 'highlight-' + verse.color : '',
+                    isFocused(verse) ? 'verse-focus' : '',
+                ].filter(Boolean).join(' ')}
+                onContextMenu={(e: React.MouseEvent) => handleContextMenu(e, verse.id)}
+            >
+                {settings.showVerseNumbers && (
+                    <sup className="verse-number">{verse.verse}</sup>
+                )}
+                {text ? (
+                    <span className="verse-text">{text}{inline ? ' ' : ''}</span>
+                ) : (
+                    // Some translations (e.g. Darby) omit verses found in
+                    // other manuscripts, such as Matthew 23:14 and Acts 8:37.
+                    <span className="verse-text verse-omitted">
+                        This verse is not included in this translation.
+                    </span>
+                )}
+            </Row>
+        );
+    };
+
     if (loading) {
         return <div className="bible-view loading">Loading...</div>;
     }
@@ -219,6 +341,16 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                     style={{ top: contextMenu.y, left: contextMenu.x }}
                     onClick={e => e.stopPropagation()}
                 >
+                    <button
+                        type="button"
+                        className="menu-copy-btn"
+                        onClick={() => handleCopy(contextMenu.verseId)}
+                    >
+                        Copy verse
+                    </button>
+
+                    <div className="menu-separator" />
+
                     <div className="menu-section">
                         <div className="menu-label">Highlight Color</div>
                         <div className="picker-colors">
@@ -300,29 +432,20 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError }: 
                     </div>
                 </header>
 
-                <div className="verses-container">
-                    {verses.map((verse) => (
-                        <div
-                            key={verse.id}
-                            className={`verse-row ${verse.color ? 'highlight-' + verse.color : ''}`}
-                            onContextMenu={(e) => handleContextMenu(e, verse.id)}
-                        >
-                            <sup
-                                className="verse-number"
-                            >
-                                {verse.verse}
-                            </sup>
-                            {verse.text.trim() ? (
-                                <span className="verse-text">{verse.text}</span>
-                            ) : (
-                                // Some translations (e.g. Darby) omit verses found in
-                                // other manuscripts, such as Matthew 23:14 and Acts 8:37.
-                                <span className="verse-text verse-omitted">
-                                    This verse is not included in this translation.
-                                </span>
-                            )}
-                        </div>
-                    ))}
+                <div
+                    className={`verses-container reading-${settings.readingMode}`}
+                    style={{
+                        '--reader-font-size': `${TEXT_SIZES[settings.textSize] ?? 1.1}rem`,
+                        '--reader-line-height': LINE_HEIGHTS[settings.lineSpacing] ?? 1.85,
+                    } as React.CSSProperties}
+                >
+                    {settings.readingMode === 'paragraphs'
+                        ? paragraphs.map((group, i) => (
+                            <p key={i} className="reading-paragraph">
+                                {group.map((verse) => renderVerse(verse, true))}
+                            </p>
+                        ))
+                        : verses.map((verse) => renderVerse(verse, false))}
                 </div>
 
                 <footer className="chapter-nav">
