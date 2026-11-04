@@ -414,3 +414,83 @@
     align-items: center;
     gap: 12px;
 }
+/* Reader display settings (set inline on .verses-container) */
+.verse-text {
+    font-size: var(--reader-font-size, 1.1rem);
+    line-height: var(--reader-line-height, 1.85);
+}
+
+.verse-row {
+    line-height: var(--reader-line-height, 1.85);
+}
+
+/* Paragraph start (from the KJV pilcrow) becomes real spacing */
+.verse-row.paragraph-start:not(:first-child) {
+    margin-top: 28px;
+}
+
+/* Paragraph reading mode: verses flow inline like a printed Bible */
+.reading-paragraph {
+    margin: 0 0 1.25em;
+    padding: 0 12px;
+    line-height: var(--reader-line-height, 1.85);
+    text-align: left;
+}
+
+.verse-row.verse-inline {
+    display: inline;
+    margin: 0;
+    padding: 2px 0;
+    border-radius: 4px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+
+.verse-inline .verse-number {
+    margin-right: 3px;
+}
+
+/* Context menu: copy button */
+.menu-copy-btn {
+    padding: 8px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-copy-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+/* Verse jump focus: a soft violet wash and edge bar, clearly unlike the
+   yellow/green/blue/pink saved highlights. Purely visual; fades in ~3s. */
+@property --focus-alpha {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
+
+.theme-light .verse-row.verse-focus { --focus-rgb: 103 58 183; }
+.theme-dark .verse-row.verse-focus { --focus-rgb: 179 157 219; }
+.theme-sepia .verse-row.verse-focus { --focus-rgb: 94 53 177; }
+
+.verse-row.verse-focus {
+    --focus-alpha: 1;
+    background-image: linear-gradient(
+        rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.22)),
+        rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.22))
+    );
+    box-shadow: inset 4px 0 0 rgb(var(--focus-rgb) / var(--focus-alpha)),
+        0 0 0 2px rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.45));
+    animation: verseFocusFade 3s ease-in forwards;
+}
+
+@keyframes verseFocusFade {
+    0%, 55% { --focus-alpha: 1; }
+    100% { --focus-alpha: 0; }
+}

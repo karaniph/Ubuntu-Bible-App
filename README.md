@@ -5,9 +5,15 @@ The Ultimate Offline Bible App for Study & Reflection — built with Electron + 
 ## Features
 
 - 🌅 **Daily Verse** — Start each day with Scripture and reflection
-- 📖 **Offline Bible** — 6 English translations included: King James Version (KJV), American Standard Version (ASV), World English Bible (WEB), Webster Bible (WBT), Young's Literal Translation (YLT), and Darby Translation (DBY)
+- 📖 **Offline Bible** — 7 English translations included: King James Version (KJV), American Standard Version (ASV), World English Bible (WEB), Webster Bible (WBT), Young's Literal Translation (YLT), Darby Translation (DBY), and Berean Standard Bible (BSB)
 - 🔍 **Instant Search** — Find any verse in milliseconds
 - 🎨 **Beautiful Themes** — Light, Dark, and Sepia modes
+- 🎯 **Verse Jump** — Type a reference like `John 3:16`, `1 cor 13:4` or `Psalm 23` in Search and press Enter; the verse opens centered with a soft highlight that fades away
+- 🔠 **Text Size & Line Spacing** — Adjust reader text size and spacing in Settings
+- 🔖 **Remembers Where You Left Off** — Reopens at your last book, chapter, translation and theme
+- 📋 **Copy Verse** — Right-click a verse to copy it with its reference, e.g. “…” John 3:16 (KJV)
+- 📄 **Cleaner Reading Mode** — Paragraph breaks instead of ¶ symbols, optional verse numbers, and a paragraph layout like a printed Bible
+- 🛒 **Daily Scripture Shop** — Sidebar link to a storefront of spiritual books and journals; opens in your browser, the app sends no data
 - ✍️ **Journaling** — Write reflections on verses
 - 🛡️ **Private** — All data stays on your device
 
@@ -97,7 +103,7 @@ The CI publish step uses Microsoft's official Store CLI (`msstore`) and can only
 ### Store policy compliance notes
 
 - **10.5.1 Personal Information** — the app stores journal reflections/highlights locally in SQLite; nothing is transmitted. See [`PRIVACY.md`](./PRIVACY.md), linked from Settings → About inside the app, and must also be entered as the privacy policy URL in Partner Center.
-- **10.1.1 Accurate representation** — app name, icon, and description must match actual functionality (offline Bible reader with 6 English translations).
+- **10.1.1 Accurate representation** — app name, icon, and description must match actual functionality (offline Bible reader with 7 English translations).
 - **10.4.2 Usability** — app must start promptly and handle errors gracefully; the existing `startupState: 'error'` fallback in `App.tsx` already covers DB init failures.
 - **10.8.2 Voluntary donations** — the app has no purchases, subscriptions, or in-app currency. "Buy Me a Coffee" is a voluntary tip that unlocks nothing, so the Microsoft Store purchase API isn't required. Tips go through Buy Me a Coffee (a secure third-party payment provider) in the user's own browser; the app never handles payment details.
   - **At submission:** mention this in Partner Center's **Notes for certification**, e.g. "Optional 'Buy Me a Coffee' tip link opens buymeacoffee.com in the user's browser. Tips are voluntary and unlock no features or content."
@@ -111,6 +117,9 @@ users stay on matching versions as long as releases are cut from the same tag.
 ## Support
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/karaniph)
+
+## Bible Text Credits
+All Bible translations included are in the public domain. The Berean Standard Bible (BSB) text comes from the publisher's official download at [bereanbible.com](https://bereanbible.com) (https://bereanbible.com/bsb.txt, 3rd printing, fetched 2026-11-04). The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain ([terms](https://berean.bible/terms.htm)). The other translations come from [eBible.org](https://ebible.org). Scripts that build and audit the Bible database are in `tools/bible-db/`.
 
 ## License
 MIT
