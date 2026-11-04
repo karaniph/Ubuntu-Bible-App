@@ -20,7 +20,8 @@ def main():
     db = sqlite3.connect('file:%s?mode=ro' % a.db, uri=True)
     verses, blanks = parse_official(a.txt)
     off = {(b, ch, v): t for b, ch, v, t in verses}
-    print('official file: %d verses with text, %d blank (omitted): %s' % (len(off), len(blanks), ', '.join('%s %d:%d' % k for k in blanks)))
+    off.update({k: '' for k in blanks})  # omitted verses are stored as empty-text rows
+    print('official file: %d verses with text, %d blank (omitted, expected as empty rows): %s' % (len(verses), len(blanks), ', '.join('%s %d:%d' % k for k in blanks)))
     mine = {(b, c, v): t for b, c, v, t in db.execute(
         '''SELECT b.code, v.chapter, v.verse, v.text FROM verses v JOIN books b ON b.id=v.book_id
            JOIN translations t ON t.id=v.translation_id WHERE t.code='ENG-BSB' ''')}

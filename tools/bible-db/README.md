@@ -16,7 +16,9 @@ Python 3 standard library only.
 
 Parse rules (`bsb_source.py`): UTF-8, BOM and 3 header lines ignored; each line is `Book C:V<TAB>text`;
 text is whitespace-normalised (runs of whitespace collapsed, trimmed) and nothing else is changed;
-verses with empty text (the 16 verses the BSB omits) are dropped, leaving 31,086 verses; book names map to the
+verses with empty text (the 16 verses the BSB omits) are stored as rows with EMPTY text (the convention ASV, WEB and Darby already use), so the reader shows its
+"This verse is not included in this translation." placeholder and verse-jump focus works. Result: 31,102 BSB rows (31,086 with text + 16 empty:
+MAT 17:21, MAT 18:11, MAT 23:14, MRK 7:16, MRK 9:44, MRK 9:46, MRK 11:26, MRK 15:28, LUK 17:36, LUK 23:17, JHN 5:4, ACT 8:37, ACT 15:34, ACT 24:7, ACT 28:29, ROM 16:24); book names map to the
 app's USFM codes by canonical position.
 
 ## Scripts

@@ -4,7 +4,7 @@
 Usage: compare_db.py --new assets/bible.db --base origin_master_bible.db --txt bsb.txt [--xml engbsb_vpl.xml]
 
 Checks: every base row of translations/books/verses is identical in --new (same ids,
-byte-for-byte text); BSB rows equal the parsed official bsb.txt exactly (zero diff; eBible XML only reported as info); BSB chapter counts equal
+byte-for-byte text); BSB rows equal the parsed official bsb.txt exactly (omitted verses as EMPTY-text rows) (zero diff; eBible XML only reported as info); BSB chapter counts equal
 the KJV's; lists KJV verses absent from the BSB; BSB ids are appended after all base ids
 in canonical order; FTS integrity; meta values. Exit 1 on any failure.
 """
@@ -57,6 +57,7 @@ def main():
     check('BSB is highest translation id', tid == new.execute('SELECT MAX(id) FROM translations').fetchone()[0], 'id=%d' % tid)
     src, blanks = parse_official(a.txt)
     print('official omitted (blank) verses: %s' % ', '.join('%s %d:%d' % k for k in blanks))
+    src = src + [k + ('',) for k in blanks]
     rows = new.execute('''SELECT v.id, b.code, v.chapter, v.verse, v.text FROM verses v JOIN books b ON b.id=v.book_id
                           WHERE v.translation_id=? ORDER BY v.id''', (tid,)).fetchall()
     check('BSB verse count == official source', len(rows) == len(src), '%d vs %d' % (len(rows), len(src)))
@@ -88,7 +89,8 @@ def main():
     extra = sorted(bs - kj, key=lambda k: (order[k[0]], k[1], k[2]))
     print('KJV verses=%d BSB verses=%d' % (len(kj), len(bs)))
     print('In KJV but absent in BSB (%d): %s' % (len(miss), ', '.join('%s %d:%d' % k for k in miss)))
-    check('KJV-only verses == official blank verses', set(miss) == {(b, c, v) for b, c, v in blanks}, '(%d)' % len(miss))
+    check('no KJV verse missing from BSB (omitted verses are present as empty rows)', not miss, '(%d)' % len(miss))
+    check('omitted verses stored with empty text', {(r[1], r[2], r[3]) for r in rows if r[4] == ''} == set(blanks), '(%d)' % len(blanks))
     print('In BSB but absent in KJV (%d): %s' % (len(extra), ', '.join('%s %d:%d' % k for k in extra)))
 
     # 4. structure / meta

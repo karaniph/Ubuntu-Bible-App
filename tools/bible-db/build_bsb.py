@@ -4,8 +4,8 @@
 Usage: build_bsb.py --txt bsb.txt --base base_bible.db --out new_bible.db --fetched YYYY-MM-DD
 
 Source: the publisher's official https://bereanbible.com/bsb.txt (see bsb_source.py for the
-exact parse rules). Verse text = whitespace-normalised text, nothing else changed; empty
-(omitted) verses are dropped. Existing rows are never touched: --out starts as a byte copy of
+exact parse rules). Verse text = whitespace-normalised text, nothing else changed; the 16
+omitted verses are stored as rows with EMPTY text (same convention as ASV, WEB and Darby). Existing rows are never touched: --out starts as a byte copy of
 --base and BSB rows are only appended (new translation id, new verse ids in canonical order).
 """
 import argparse
@@ -28,7 +28,7 @@ def main():
     a = ap.parse_args()
 
     verses, blanks = parse_official(a.txt)
-    print('parsed %d verses, dropped %d empty: %s' % (len(verses), len(blanks), ', '.join('%s %d:%d' % k for k in blanks)))
+    print('parsed %d verses, %d omitted (stored as empty rows): %s' % (len(verses), len(blanks), ', '.join('%s %d:%d' % k for k in blanks)))
     print('source sha256', hashlib.sha256(open(a.txt, 'rb').read()).hexdigest())
     shutil.copyfile(a.base, a.out)
     db = sqlite3.connect(a.out)
@@ -40,10 +40,11 @@ def main():
         sys.exit('unknown book codes in source: %s' % sorted(unknown))
     if db.execute('SELECT 1 FROM translations WHERE code=?', (CODE,)).fetchone():
         sys.exit('%s already present in base' % CODE)
-    if any(not v[3] for v in verses):
-        sys.exit('empty verse text in source')
     if len({(v[0], v[1], v[2]) for v in verses}) != len(verses):
         sys.exit('duplicate book/chapter/verse in source')
+    verses = verses + [k + ('',) for k in blanks]
+    if any(not v[3] for v in verses if (v[0], v[1], v[2]) not in set(blanks)):
+        sys.exit('empty verse text in source')
     verses.sort(key=lambda v: (books[v[0]][1], v[1], v[2]))
 
     with db:

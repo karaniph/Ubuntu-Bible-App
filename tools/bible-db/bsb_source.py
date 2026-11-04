@@ -8,7 +8,9 @@ PARSE RULES (identical in spirit to the other six translations: no wording edits
     - UTF-8 (a leading BOM is ignored); the 3 header lines are skipped.
     - A data line is  "<Book name> <chapter>:<verse>\\t<text>"  with CRLF line endings.
     - text = whitespace-normalised (runs of whitespace collapsed, trimmed). Nothing else is changed.
-    - Lines whose text is empty (the 16 verses the BSB omits, which follow the critical text) are dropped.
+    - Lines whose text is empty (the 16 verses the BSB omits, which follow the critical text) are kept as rows with EMPTY text (parse_official returns them separately as `blanks`;
+      build_bsb.py stores them as empty rows, the convention ASV, WEB and Darby use, so the reader shows
+      "This verse is not included in this translation.").
     - Book names are mapped to USFM codes by position in the app's 66-book canon.
 
 CROSS-CHECK SOURCE (informational only): eBible.org Verse-Per-Line XML
