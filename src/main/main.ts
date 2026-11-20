@@ -2,6 +2,10 @@ import { app, BrowserWindow, clipboard, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus, requireDatabase } from './database';
 import { listStudies, getStudy, createStudy, updateStudy, deleteStudy, addStudyPassages, updateStudyPassageNote, removeStudyPassage, moveStudyPassage, runStudyWrite } from './studies';
+import { initStudyDatabase, getStudyDatabase, getStudyDataStatus } from './studyDb';
+import { listConcordanceWords, lookupConcordance, getConcordanceVerses } from './concordance';
+import { getCommentaryChapter } from './commentary';
+import { exportStudy } from './studyExport';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
@@ -211,13 +215,80 @@ function registerIpcHandlers() {
         await dbReady;
         return runStudyWrite(() => moveStudyPassage(requireDatabase(), passageId, direction));
     });
+    // Study export (PDF / text / print). Only the main window may ask; the main process
+    // re-reads the study and writes only to the path the user picks in the save dialog.
+    ipcMain.handle('studies:export', async (event, studyId: unknown, translationId: unknown, format: unknown) => {
+        await dbReady;
+        if (!mainWindow || event.sender !== mainWindow.webContents) {
+            return { ok: false, error: 'Export is not available.' };
+        }
+        return exportStudy(mainWindow, requireDatabase(), studyId, translationId, format);
+    });
+    // Concordance and commentary read the bundled, read-only study.db. When it is
+    // missing or unreadable these return a friendly error and the rest of the app works.
+    ipcMain.handle('study:getStatus', async () => {
+        await dbReady;
+        return getStudyDataStatus();
+    });
+    ipcMain.handle('concordance:words', async (_, translationId: unknown, prefix: unknown, offset: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return listConcordanceWords(requireDatabase(), studyDb, translationId, prefix, offset);
+        } catch (err) {
+            console.error('concordance:words failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('concordance:lookup', async (_, translationId: unknown, word: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return await lookupConcordance(requireDatabase(), studyDb, translationId, word);
+        } catch (err) {
+            console.error('concordance:lookup failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('concordance:verses', async (_, translationId: unknown, word: unknown, bookId: unknown, offset: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return await getConcordanceVerses(requireDatabase(), studyDb, translationId, word, bookId, offset);
+        } catch (err) {
+            console.error('concordance:verses failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('commentary:chapter', async (_, bookCode: unknown, chapter: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return getCommentaryChapter(studyDb, bookCode, chapter);
+        } catch (err) {
+            console.error('commentary:chapter failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
 }
+
+const STUDY_DATA_ERROR = 'Something went wrong reading the study tools. Please try again.';
 
 function initializeDatabaseInBackground() {
     setImmediate(async () => {
         try {
             await initDatabase();
         } finally {
+            // study.db is separate and read-only; a failure here never affects bible.db.
+            try {
+                initStudyDatabase();
+            } catch (err) {
+                console.error('Study database failed to initialise:', err);
+            }
             dbReadyResolve?.();
             dbReadyResolve = null;
         }

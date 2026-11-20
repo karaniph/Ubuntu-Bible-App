@@ -51,6 +51,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('studies:removePassage', passageId),
     moveStudyPassage: (passageId: number, direction: 'up' | 'down') =>
         ipcRenderer.invoke('studies:movePassage', passageId, direction),
+    exportStudy: (studyId: number, translationId: number, format: StudyExportFormat) =>
+        ipcRenderer.invoke('studies:export', studyId, translationId, format),
+    // Bundled study tools (read-only study.db)
+    getStudyDataStatus: () => ipcRenderer.invoke('study:getStatus'),
+    listConcordanceWords: (translationId: number, prefix: string, offset: number) =>
+        ipcRenderer.invoke('concordance:words', translationId, prefix, offset),
+    lookupConcordance: (translationId: number, word: string) =>
+        ipcRenderer.invoke('concordance:lookup', translationId, word),
+    getConcordanceVerses: (translationId: number, word: string, bookId: number | null, offset: number) =>
+        ipcRenderer.invoke('concordance:verses', translationId, word, bookId, offset),
+    getCommentaryChapter: (bookCode: string, chapter: number) =>
+        ipcRenderer.invoke('commentary:chapter', bookCode, chapter),
 });
 
 // Type declarations
@@ -84,6 +96,12 @@ declare global {
             updateStudyPassageNote: (passageId: number, note: string) => Promise<StudyResult<{ id: number; note: string; updated_at: string }>>;
             removeStudyPassage: (passageId: number) => Promise<StudyResult<null>>;
             moveStudyPassage: (passageId: number, direction: 'up' | 'down') => Promise<StudyResult<number[]>>;
+            exportStudy: (studyId: number, translationId: number, format: StudyExportFormat) => Promise<StudyResult<StudyExportOutcome>>;
+            getStudyDataStatus: () => Promise<StudyDataStatus>;
+            listConcordanceWords: (translationId: number, prefix: string, offset: number) => Promise<StudyResult<ConcordanceWordPage>>;
+            lookupConcordance: (translationId: number, word: string) => Promise<StudyResult<ConcordanceLookup>>;
+            getConcordanceVerses: (translationId: number, word: string, bookId: number | null, offset: number) => Promise<StudyResult<ConcordanceVersePage>>;
+            getCommentaryChapter: (bookCode: string, chapter: number) => Promise<StudyResult<CommentaryNote[]>>;
         };
     }
 }
@@ -182,3 +200,64 @@ export interface StudyPassageInput {
 }
 
 export type StudyResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+export type StudyExportFormat = 'pdf' | 'txt' | 'print';
+
+export interface StudyExportOutcome {
+    status: 'saved' | 'printed' | 'cancelled';
+    filePath?: string;
+}
+
+// Bundled, read-only study tools (assets/study.db). Keyed by book code + chapter + verse.
+export interface StudyDataStatus {
+    ready: boolean;
+    error: string | null;
+}
+
+export interface ConcordanceWord {
+    word: string;
+    verse_count: number;
+    occurrence_count: number;
+}
+
+export interface ConcordanceWordPage {
+    words: ConcordanceWord[];
+    hasMore: boolean;
+}
+
+export interface ConcordanceBookCount {
+    bookId: number;
+    bookCode: string;
+    bookName: string;
+    verseCount: number;
+}
+
+export interface ConcordanceLookup {
+    word: string;
+    translationId: number;
+    verseCount: number;
+    occurrenceCount: number | null;
+    books: ConcordanceBookCount[];
+}
+
+export interface ConcordanceVerse {
+    id: number;
+    bookId: number;
+    bookCode: string;
+    bookName: string;
+    chapter: number;
+    verse: number;
+    text: string;
+}
+
+export interface ConcordanceVersePage {
+    verses: ConcordanceVerse[];
+    total: number;
+    offset: number;
+}
+
+export interface CommentaryNote {
+    verseStart: number;
+    verseEnd: number;
+    html: string;
+}
