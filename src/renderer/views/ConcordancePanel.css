@@ -1,0 +1,206 @@
+/* Concordance mode of the Search screen. Uses the same theme variables as SearchView.css. */
+.concordance {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.concordance-unavailable {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.concordance-words {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.concordance-letters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.concordance-letter {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.concordance-letter:hover,
+.concordance-letter.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--accent);
+}
+
+.concordance-word-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.concordance-word-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.concordance-word-input::placeholder {
+    color: var(--text-muted);
+}
+
+.concordance-word-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.concordance-word-item {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.concordance-word-item:hover {
+    background: var(--accent-muted);
+}
+
+.concordance-word-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.concordance-word-count {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.concordance-more-words,
+.concordance-more {
+    padding: 8px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.concordance-more-words:hover,
+.concordance-more:hover {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.concordance-results {
+    flex: 1;
+    min-width: 0;
+}
+
+.concordance-hint {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.concordance-summary {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin: 0 0 8px;
+}
+
+.concordance-common-warning {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0 0 8px;
+}
+
+.concordance-books {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 16px;
+}
+
+.concordance-book {
+    padding: 4px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.concordance-book:hover,
+.concordance-book.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.concordance-book.active {
+    font-weight: 600;
+}
+
+.concordance-verse-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+}
+
+.concordance-verse {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.concordance-verse:hover {
+    background: var(--accent-muted);
+}
+
+.concordance-verse-ref {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.concordance-verse-text {
+    display: block;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+}

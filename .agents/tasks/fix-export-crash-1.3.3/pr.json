@@ -1,0 +1,7 @@
+{
+  "url": "https://github.com/karaniph/Ubuntu-Bible-App/pull/8",
+  "number": 8,
+  "title": "Release 1.3.3: fix export crash in snap",
+  "branch": "fix-export-crash-1.3.3",
+  "head_sha": "d546cf32c4721e0cbb36ccca816a0a460a9001fc"
+}

@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/karaniph/Ubuntu-Bible-App/pull/7",
+  "number": 7,
+  "title": "Release 1.3.2: fix export crash",
+  "branch": "fix-export-crash-1.3.2",
+  "base": "master",
+  "repo": "karaniph/Ubuntu-Bible-App",
+  "comment_on_pr6": "https://github.com/karaniph/Ubuntu-Bible-App/pull/6#issuecomment-7043184722",
+  "open_prs": [3, 4, 5, 6, 7]
+}

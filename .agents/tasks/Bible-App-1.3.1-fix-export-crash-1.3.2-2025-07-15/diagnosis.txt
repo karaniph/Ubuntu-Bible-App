@@ -1,0 +1,63 @@
+ROOT CAUSE DIAGNOSIS — Bible App 1.3.1 Export Crash
+Date: 2025-07-15
+
+=== CONFIRMED ROOT CAUSE ===
+
+The 1.3.1 release added a font-config fix block that runs SYNCHRONOUSLY at module level
+(before app.whenReady()), modifying $XDG_CONFIG_HOME/fontconfig/fonts.conf. The fix is
+correct in intent: it removes a stale <cachedir> line that caused the GTK Save/Print
+dialogs to render all text as boxes (the original 1.3.0 bug). However, running it at
+module load time creates a race with GTK initialization that causes a crash on Export.
+
+=== SEQUENCE OF FAILURE ===
+
+1. main.ts module loads. The font fix runs immediately (synchronously), removing the bad
+   <cachedir> line from fonts.conf. At this point, GTK has NOT yet initialised; fontconfig's
+   internal state is uninitialised.
+
+2. app.whenReady() fires. GTK initialises and reads the already-modified fonts.conf,
+   building its fontconfig state from that file. So far no crash.
+
+3. User clicks Export. exportStudy() calls renderInHiddenWindow(), which creates a second
+   BrowserWindow with { sandbox: true, partition: 'study-export' }.
+
+4. Creating a second BrowserWindow with sandbox: true in snap strict confinement triggers
+   a new GTK/fontconfig context for the renderer process. fontconfig 2.12.6 (from the
+   gnome-3-28-1804 runtime bundled in the snap) attempts to validate its cache:
+     a. It reads fonts.conf again and may see it has changed from what it last cached, OR
+     b. It attempts to write a rebuilt cache to $XDG_CACHE_HOME/fontconfig/ — but this
+        directory may not exist (snap strict confinement on a first-run or fresh homedir
+        revision), causing SIGABRT.
+     c. Additionally, sandbox: true in webPreferences with --no-sandbox at the app command
+        level creates a Chromium sandbox conflict that may also trigger the FATAL
+        credentials.cc crash observed in testing.
+
+5. The process aborts / receives SIGSEGV or SIGABRT before the PDF/text file dialog opens.
+
+=== WHY 1.3.0 DID NOT CRASH ===
+
+1.3.0 had no font fix code. The Export feature worked (the hidden window was created
+with sandbox: true but no fonts.conf mutation had occurred beforehand). The 1.3.1
+addition of the module-level font fix is what introduced the timing conflict.
+
+=== EVIDENCE SUPPORTING THIS DIAGNOSIS ===
+
+1. Rev 24 fonts.conf had the bad <cachedir> line; rev 25 does not — proving the
+   font fix code ran (and ran before GTK got a chance to stabilise it).
+2. App runs for ~1 min in the user session (journalctl), crashing only on Export.
+3. Snap run test with --user-data-dir crashes with credentials.cc FATAL, consistent
+   with sandbox: true in webPreferences conflicting with app-level --no-sandbox.
+4. No crash in dmesg/journalctl at startup — the crash is deferred to Export time.
+
+=== FIX CHOSEN ===
+
+Option A+B:
+  A) Move the entire font fix block into app.whenReady(), after setAppMenu() and
+     before createWindow(). This ensures GTK has fully initialised before fonts.conf
+     is touched, preventing the stale-state crash on second window creation.
+  B) Before writing fonts.conf, ensure $XDG_CACHE_HOME/fontconfig exists (mkdirSync
+     with recursive: true), so fontconfig can always write its rebuilt cache.
+
+This is the safest fix: it preserves the font fix's correctness, avoids redesigning
+the export flow, and does not touch the hidden-window sandbox setting (which is
+intentionally sandboxed for the renderer to block network/fs access from the HTML).

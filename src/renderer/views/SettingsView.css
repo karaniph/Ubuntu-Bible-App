@@ -107,26 +107,38 @@
     font-size: 0.9rem;
 }
 
-.support-button {
-    display: inline-block;
-    padding: 12px 24px;
-    background: #ffdd00;
-    color: #000;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
+.about-credits-title {
+    margin: 20px 0 4px;
     font-size: 0.95rem;
-    transition: transform 0.2s;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.support-button:hover {
-    transform: scale(1.02);
+/* Contact & feedback: body-size, selectable text in --text-primary (the accent colour
+   is under 4.5:1 on the light and sepia backgrounds). */
+.contact-text {
+    color: var(--text-primary);
+    margin: 0 0 8px;
 }
 
-.support-text {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-top: 12px;
+.contact-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.contact-email {
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: underline;
+    user-select: text;
+    word-break: break-all;
+}
+
+.contact-email:hover {
+    text-decoration-thickness: 2px;
 }
 
 .backup-hint {
@@ -163,4 +175,62 @@
 
 .backup-file-input {
     display: none;
+}
+
+.settings-section .setting-row + .setting-row {
+    margin-top: 16px;
+}
+
+.range-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.range-control input[type='range'] {
+    width: 180px;
+    accent-color: var(--accent);
+}
+
+.range-small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.range-large {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+}
+
+.choice-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.choice-button {
+    padding: 8px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.choice-button:hover {
+    border-color: var(--accent);
+}
+
+.choice-button.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.toggle-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    cursor: pointer;
 }
