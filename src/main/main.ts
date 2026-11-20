@@ -1,6 +1,12 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
-import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus } from './database';
+import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus, requireDatabase } from './database';
+import { listStudies, getStudy, createStudy, updateStudy, deleteStudy, addStudyPassages, updateStudyPassageNote, removeStudyPassage, moveStudyPassage, runStudyWrite } from './studies';
+import { initStudyDatabase, getStudyDatabase, getStudyDataStatus } from './studyDb';
+import { listConcordanceWords, lookupConcordance, getConcordanceVerses } from './concordance';
+import { getCommentaryChapter } from './commentary';
+import { exportStudy } from './studyExport';
+import { FEEDBACK_EMAIL, FEEDBACK_MAILTO, FEEDBACK_SUBJECT } from './feedback';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
@@ -65,7 +71,7 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     }
 
-    // Web links (donations, privacy policy) must open in the user's browser, where
+    // Web links (privacy policy) must open in the user's browser, where
     // they can see the real address, never in an app window without one.
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         void openInBrowser(url);
@@ -102,8 +108,34 @@ async function openInBrowser(url: string) {
     }
 }
 
+// The only non-web link the app opens: the feedback email in the user's own mail app.
+// Accepted only when the recipient is exactly FEEDBACK_EMAIL and the sole parameter is
+// our subject (no other recipients, cc, bcc or body). The canonical URL is opened.
+async function openFeedbackEmail(url: unknown): Promise<boolean> {
+    if (typeof url !== 'string' || url.length > 200) return false;
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return false;
+    }
+    if (parsed.protocol !== 'mailto:' || parsed.pathname !== FEEDBACK_EMAIL || parsed.hash) return false;
+    const keys = [...parsed.searchParams.keys()];
+    if (keys.length !== 1 || keys[0] !== 'subject' || parsed.searchParams.get('subject') !== FEEDBACK_SUBJECT) return false;
+    await shell.openExternal(FEEDBACK_MAILTO);
+    return true;
+}
+
 function registerIpcHandlers() {
     ipcMain.handle('app:openExternal', async (_, url: string) => openInBrowser(url));
+    ipcMain.handle('app:openFeedbackEmail', async (_, url: unknown) => openFeedbackEmail(url));
+    // Plain-text clipboard bridge for "Copy verse". Only non-empty strings of a
+    // sane size are accepted; nothing else can be written from the renderer.
+    ipcMain.handle('app:copyText', (_, text: unknown) => {
+        if (typeof text !== 'string' || text.length === 0 || text.length > 200000) return false;
+        clipboard.writeText(text);
+        return true;
+    });
     ipcMain.handle('db:getStatus', () => getDatabaseStatus());
     ipcMain.handle('db:waitUntilReady', async () => {
         await dbReady;
@@ -165,13 +197,118 @@ function registerIpcHandlers() {
         await dbReady;
         return importBackup(payload);
     });
+    // Bible studies. Every argument is validated in studies.ts; writes touch only the
+    // studies/study_passages tables and report problems as { ok: false, error }.
+    ipcMain.handle('studies:list', async () => {
+        await dbReady;
+        return listStudies(requireDatabase());
+    });
+    ipcMain.handle('studies:get', async (_, studyId: unknown, translationId: unknown) => {
+        await dbReady;
+        return getStudy(requireDatabase(), studyId, translationId);
+    });
+    ipcMain.handle('studies:create', async (_, name: unknown, description: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => createStudy(requireDatabase(), name, description));
+    });
+    ipcMain.handle('studies:update', async (_, studyId: unknown, name: unknown, description: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => updateStudy(requireDatabase(), studyId, name, description));
+    });
+    ipcMain.handle('studies:delete', async (_, studyId: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => deleteStudy(requireDatabase(), studyId));
+    });
+    ipcMain.handle('studies:addPassages', async (_, studyId: unknown, passages: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => addStudyPassages(requireDatabase(), studyId, passages));
+    });
+    ipcMain.handle('studies:updatePassageNote', async (_, passageId: unknown, note: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => updateStudyPassageNote(requireDatabase(), passageId, note));
+    });
+    ipcMain.handle('studies:removePassage', async (_, passageId: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => removeStudyPassage(requireDatabase(), passageId));
+    });
+    ipcMain.handle('studies:movePassage', async (_, passageId: unknown, direction: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => moveStudyPassage(requireDatabase(), passageId, direction));
+    });
+    // Study export (PDF / text / print). Only the main window may ask; the main process
+    // re-reads the study and writes only to the path the user picks in the save dialog.
+    ipcMain.handle('studies:export', async (event, studyId: unknown, translationId: unknown, format: unknown) => {
+        await dbReady;
+        if (!mainWindow || event.sender !== mainWindow.webContents) {
+            return { ok: false, error: 'Export is not available.' };
+        }
+        return exportStudy(mainWindow, requireDatabase(), studyId, translationId, format);
+    });
+    // Concordance and commentary read the bundled, read-only study.db. When it is
+    // missing or unreadable these return a friendly error and the rest of the app works.
+    ipcMain.handle('study:getStatus', async () => {
+        await dbReady;
+        return getStudyDataStatus();
+    });
+    ipcMain.handle('concordance:words', async (_, translationId: unknown, prefix: unknown, offset: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return listConcordanceWords(requireDatabase(), studyDb, translationId, prefix, offset);
+        } catch (err) {
+            console.error('concordance:words failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('concordance:lookup', async (_, translationId: unknown, word: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return await lookupConcordance(requireDatabase(), studyDb, translationId, word);
+        } catch (err) {
+            console.error('concordance:lookup failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('concordance:verses', async (_, translationId: unknown, word: unknown, bookId: unknown, offset: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return await getConcordanceVerses(requireDatabase(), studyDb, translationId, word, bookId, offset);
+        } catch (err) {
+            console.error('concordance:verses failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
+    ipcMain.handle('commentary:chapter', async (_, bookCode: unknown, chapter: unknown) => {
+        await dbReady;
+        const studyDb = getStudyDatabase();
+        if (!studyDb) return { ok: false, error: getStudyDataStatus().error };
+        try {
+            return getCommentaryChapter(studyDb, bookCode, chapter);
+        } catch (err) {
+            console.error('commentary:chapter failed:', err);
+            return { ok: false, error: STUDY_DATA_ERROR };
+        }
+    });
 }
+
+const STUDY_DATA_ERROR = 'Something went wrong reading the study tools. Please try again.';
 
 function initializeDatabaseInBackground() {
     setImmediate(async () => {
         try {
             await initDatabase();
         } finally {
+            // study.db is separate and read-only; a failure here never affects bible.db.
+            try {
+                initStudyDatabase();
+            } catch (err) {
+                console.error('Study database failed to initialise:', err);
+            }
             dbReadyResolve?.();
             dbReadyResolve = null;
         }

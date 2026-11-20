@@ -15,6 +15,34 @@
     margin: 0 0 20px 0;
 }
 
+.search-mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin: -8px 0 16px;
+}
+
+.search-mode-tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.search-mode-tab:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+.search-mode-tab.active {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
 .search-controls {
     display: flex;
     gap: 10px;
@@ -112,4 +140,42 @@
     color: inherit;
     padding: 0 2px;
     border-radius: 2px;
+}
+/* Verse jump ("Go to John 3:16") */
+.goto-reference {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    background: var(--accent-muted);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.goto-reference:hover {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+
+.goto-hint {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.goto-reference:hover .goto-hint {
+    color: var(--bg-primary);
+}
+
+.goto-message {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }

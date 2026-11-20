@@ -11,13 +11,20 @@ Bible App does not collect, transmit, or share any personal information with the
 - Verse highlights and highlight colors
 - Topics you create
 - Journal reflections you write
+- Bible studies (names, descriptions, passages and notes)
 - Reading plan progress
+- Display preferences (theme, text size, line spacing, reading options)
+- Your last reading position (translation, book, and chapter)
 
 is stored **locally only** on your device. None of this data ever leaves your device. The App has no backend server, no user accounts, and makes no network requests to transmit your content.
 
 ## 2. Data Storage and Security
 
-Highlights, topics, and reflections are stored in a local SQLite database in the App's per-user application data folder. Reading plan progress is stored in the App's local browser storage in the same folder. Both are accessible only to your own operating system user account under normal file permissions. The data is not encrypted at rest.
+Highlights, topics, reflections, and Bible studies are stored in a local SQLite database in the App's per-user application data folder. Reading plan progress, display preferences, and your last reading position are stored in the App's local browser storage in the same folder. Both are accessible only to your own operating system user account under normal file permissions. The data is not encrypted at rest.
+
+When you export a study (PDF or text file), the App saves the file only where you choose in the save dialog. Nothing is transmitted.
+
+The concordance word list and Matthew Henry's Concise Commentary are bundled with the App as a read-only file. They contain no user data, and the App never writes to them.
 
 ## 3. Data Sharing
 
@@ -25,11 +32,12 @@ Bible App does not share, sell, or transmit any user data to third parties, adve
 
 ## 4. External Links
 
-The App contains links (for example, this Privacy Policy and an optional "Buy Me a Coffee" support page) that open in your web browser. Those websites have their own privacy policies. The App does not send any of your data to them.
+The App contains links (for example, this Privacy Policy) that open in your web browser. Those websites have their own privacy policies. The App does not send any of your data to them.
+
 
 ## 5. Deleting Your Data
 
-- **Windows (Microsoft Store):** uninstalling the App removes its application data, including all highlights, topics, reflections, and reading plan progress.
+- **Windows (Microsoft Store):** uninstalling the App removes its application data, including all highlights, topics, reflections, Bible studies, and reading plan progress.
 - **Linux (Snap Store):** run `sudo snap remove --purge bible-app`. A plain `snap remove` keeps an automatic snapshot of app data for a limited time.
 
 ## 6. Children's Privacy
@@ -42,4 +50,6 @@ If a future version adds a feature that collects or transmits personal informati
 
 ## 8. Contact
 
-For privacy questions, open an issue on the project's GitHub repository: https://github.com/karaniph/Ubuntu-Bible-App/issues
+For privacy questions or suggestions, email karanidevops@gmail.com or open an issue on the project's GitHub repository: https://github.com/karaniph/Ubuntu-Bible-App/issues
+
+The email link in Settings opens your own mail app with a new message; the App itself sends nothing.

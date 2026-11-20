@@ -1,0 +1,31 @@
+Bible App credits
+=================
+
+Commentary
+----------
+Matthew Henry's Concise Commentary. Text: Christian Classics Ethereal Library via CrossWire Bible Society. Public domain.
+
+Source: CrossWire Bible Society SWORD module MHCC, version 2.0 (2021-02-14),
+https://www.crosswire.org/sword/modules/ModInfo.jsp?modName=MHCC
+Distribution License: "Public Domain". The module's text source is CCEL
+(https://ccel.org/ccel/h/henry/mhcc/cache/mhcc.txt).
+The build scripts that turn the module into assets/study.db are in tools/study-db/.
+
+Bible text
+----------
+All Bible translations included are in the public domain.
+The Berean Standard Bible (BSB) text comes from the publisher's official download at
+https://bereanbible.com/bsb.txt (3rd printing, fetched 2026-11-04). The Holy Bible,
+Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible,
+OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has
+been dedicated to the public domain (https://berean.bible/terms.htm).
+The other translations (KJV, ASV, WEB, Webster, YLT, Darby) come from eBible.org
+(https://ebible.org). Scripts that build and audit the Bible database are in tools/bible-db/.
+
+Concordance
+-----------
+The concordance is built from the bundled Bible translations.
+
+App icon
+--------
+The app icon is original artwork made for this app.
