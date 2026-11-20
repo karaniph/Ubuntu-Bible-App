@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { app } from 'electron';
+import { ensureStudyTables } from './studies';
 
 let db: Database.Database | null = null;
 let dbInitError: string | null = null;
@@ -74,7 +75,7 @@ function readTextVersion(database: Database.Database): number {
 }
 
 // Tables holding the user's own data. upgradeBibleText must leave them exactly as they were.
-const USER_DATA_TABLES = ['topics', 'highlights', 'reflections'];
+const USER_DATA_TABLES = ['topics', 'highlights', 'reflections', 'studies', 'study_passages'];
 
 /**
  * SHA-256 over a full dump of the user's topics, highlights and reflections (every column of
@@ -261,6 +262,10 @@ function ensureDb(): Database.Database {
     return db;
 }
 
+export function requireDatabase(): Database.Database {
+    return ensureDb();
+}
+
 export async function initDatabase() {
     const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 
@@ -358,6 +363,14 @@ export async function initDatabase() {
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `).run();
+
+        // Bible studies use their own new tables. If they can't be created, reading,
+        // highlights and reflections keep working; only Studies reports an error.
+        try {
+            ensureStudyTables(db);
+        } catch (err) {
+            console.error('Could not create study tables:', err);
+        }
     } catch (err) {
         console.error('CRITICAL: Failed to initialize database:', err);
         dbInitError = err instanceof Error ? err.message : 'Unknown database initialization error';
