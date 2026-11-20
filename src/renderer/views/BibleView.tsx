@@ -7,7 +7,8 @@ import {
 } from '../lib/storage';
 import { HIGHLIGHT_COLORS } from '../lib/highlights';
 import { formatVerseRuns, verseRuns } from '../lib/reference';
-import type { StudySummary } from '../../main/preload';
+import { renderSafeHtml } from '../lib/safeHtml';
+import type { CommentaryNote, StudySummary } from '../../main/preload';
 
 interface Book {
     id: number;
@@ -39,9 +40,11 @@ interface BibleViewProps {
     onError?: (message: string) => void;
     onToast?: (message: string) => void;
     settings: AppSettings;
+    commentaryOpen: boolean;
+    onToggleCommentary: () => void;
 }
 
-export default function BibleView({ initialTarget, onTargetConsumed, onError, onToast, settings }: BibleViewProps) {
+export default function BibleView({ initialTarget, onTargetConsumed, onError, onToast, settings, commentaryOpen, onToggleCommentary }: BibleViewProps) {
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [books, setBooks] = useState<Book[]>([]);
     const [verses, setVerses] = useState<Verse[]>([]);
@@ -88,6 +91,14 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
     const selectAnchor = useRef<number | null>(null);
     const [selectionBusy, setSelectionBusy] = useState(false);
     const [studyPicker, setStudyPicker] = useState<{ studies: StudySummary[]; choice: string; newName: string } | null>(null);
+
+    // Commentary panel (Matthew Henry's Concise, from the read-only study.db). The
+    // active verse picks which note is highlighted. UI only: never saved.
+    const [activeVerse, setActiveVerse] = useState<number | null>(null);
+    const [commentary, setCommentary] = useState<{ key: string; notes: CommentaryNote[] } | null>(null);
+    const [commentaryError, setCommentaryError] = useState<string | null>(null);
+    const commentaryReq = useRef(0);
+    const noteRefs = useRef(new Map<number, HTMLElement>());
 
     const clearSelection = () => {
         setSelected(new Set());
@@ -216,6 +227,7 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
         if (!selectedBook || selectedBook.id !== focus.bookId || selectedChapter !== focus.chapter) return;
         if (!verses.some(v => v.chapter === focus.chapter && v.verse === focus.start && v.book_code === selectedBook.code)) return;
         focusHandled.current = focus.nonce;
+        setActiveVerse(focus.start);
         const el = document.getElementById(`verse-${focus.start}`);
         el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
         if (focusTimer.current) clearTimeout(focusTimer.current);
@@ -225,7 +237,52 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
     // A new chapter, book or translation starts with nothing selected.
     useEffect(() => {
         clearSelection();
+        setActiveVerse(null);
     }, [selectedBook?.id, selectedChapter, selectedTranslation]);
+
+    // Load the chapter's commentary notes while the panel is open.
+    const commentaryKey = selectedBook ? `${selectedBook.code} ${selectedChapter}` : '';
+    useEffect(() => {
+        if (!commentaryOpen || !selectedBook) return;
+        const req = ++commentaryReq.current;
+        const key = `${selectedBook.code} ${selectedChapter}`;
+        (async () => {
+            try {
+                const status = await window.electronAPI.getStudyDataStatus();
+                if (req !== commentaryReq.current) return;
+                if (!status.ready) {
+                    setCommentaryError(status.error || "The commentary isn't available right now.");
+                    setCommentary(null);
+                    return;
+                }
+                const result = await window.electronAPI.getCommentaryChapter(selectedBook.code, selectedChapter);
+                if (req !== commentaryReq.current) return;
+                if (!result.ok) {
+                    setCommentaryError(result.error);
+                    setCommentary(null);
+                    return;
+                }
+                setCommentaryError(null);
+                setCommentary({ key, notes: result.value });
+            } catch {
+                if (req === commentaryReq.current) {
+                    setCommentaryError('Could not load the commentary.');
+                    setCommentary(null);
+                }
+            }
+        })();
+    }, [commentaryOpen, selectedBook?.code, selectedChapter]);
+
+    const commentaryNotes = commentary && commentary.key === commentaryKey ? commentary.notes : [];
+    const activeNote = activeVerse === null
+        ? null
+        : commentaryNotes.find((n) => n.verseStart <= activeVerse && activeVerse <= n.verseEnd) ?? null;
+    const activeNoteStart = activeNote ? activeNote.verseStart : null;
+
+    useEffect(() => {
+        if (!commentaryOpen || activeNoteStart === null) return;
+        noteRefs.current.get(activeNoteStart)?.scrollIntoView({ block: 'nearest' });
+    }, [commentaryOpen, activeNoteStart, commentaryKey]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -484,6 +541,7 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
                     isSelected ? 'verse-selected' : '',
                 ].filter(Boolean).join(' ')}
                 onContextMenu={(e: React.MouseEvent) => handleContextMenu(e, verse.id)}
+                onClick={() => setActiveVerse(verse.verse)}
             >
                 {settings.showVerseNumbers && (
                     <sup
@@ -492,6 +550,7 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
                         tabIndex={0}
                         aria-pressed={isSelected}
                         title="Select verse (Shift-click selects a run)"
+                        onFocus={() => setActiveVerse(verse.verse)}
                         onClick={(e) => handleSelectClick(e, verse.verse, false)}
                         onMouseDown={preventShiftSelect}
                         onKeyDown={(e) => {
@@ -615,6 +674,15 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
                         {selectedBook?.name} {selectedChapter}
                     </h1>
                     <div className="header-controls">
+                        <button
+                            type="button"
+                            className="commentary-toggle"
+                            aria-pressed={commentaryOpen}
+                            title="Matthew Henry's Concise Commentary"
+                            onClick={onToggleCommentary}
+                        >
+                            Commentary
+                        </button>
                         <select
                             className="translation-select"
                             value={selectedTranslation}
@@ -751,6 +819,39 @@ export default function BibleView({ initialTarget, onTargetConsumed, onError, on
                     </button>
                 </footer>
             </div>
+
+            {commentaryOpen && (
+                <aside className="commentary-panel" aria-label="Commentary">
+                    <h2 className="commentary-heading">Matthew Henry's Concise Commentary</h2>
+                    <h3 className="commentary-subheading">{selectedBook?.name} {selectedChapter}</h3>
+                    <p className="commentary-caption">Notes follow King James verse numbers.</p>
+                    {commentaryError ? (
+                        <p className="commentary-unavailable">{commentaryError}</p>
+                    ) : commentary && commentary.key === commentaryKey ? (
+                        commentaryNotes.length === 0 ? (
+                            <p className="commentary-empty">No commentary for this chapter.</p>
+                        ) : (
+                            commentaryNotes.map((note) => (
+                                <section
+                                    key={note.verseStart}
+                                    ref={(el) => {
+                                        if (el) noteRefs.current.set(note.verseStart, el);
+                                        else noteRefs.current.delete(note.verseStart);
+                                    }}
+                                    className={'commentary-note' + (activeNote === note ? ' active' : '')}
+                                    aria-label={note.verseStart === note.verseEnd
+                                        ? `Verse ${note.verseStart}`
+                                        : `Verses ${note.verseStart}-${note.verseEnd}`}
+                                >
+                                    {renderSafeHtml(note.html)}
+                                </section>
+                            ))
+                        )
+                    ) : (
+                        <p className="commentary-loading">Loading…</p>
+                    )}
+                </aside>
+            )}
         </div>
     );
 }

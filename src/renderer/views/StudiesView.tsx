@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './StudiesView.css';
 import { NavigationTarget } from '../App';
-import type { StudyDetail, StudyPassageWithText, StudySummary, Translation } from '../../main/preload';
+import type { StudyDetail, StudyExportFormat, StudyPassageWithText, StudySummary, Translation } from '../../main/preload';
 import { BookLike, buildBookLookup, formatPassage, parsePassage } from '../lib/reference';
 import { loadLastRead, stripPilcrow } from '../lib/storage';
 
@@ -32,6 +32,7 @@ export default function StudiesView({ onNavigateToBible, onError, onToast, openS
     const [message, setMessage] = useState<string | null>(null);
     const [confirmRemoveId, setConfirmRemoveId] = useState<number | null>(null);
     const [busy, setBusy] = useState(false);
+    const [exportMenu, setExportMenu] = useState(false);
     // Latest typed note per passage (saved or not), so Remove can ask first when a note exists.
     const drafts = useRef(new Map<number, string>());
     // App recreates its callbacks on every render; keep the latest without refetching.
@@ -291,6 +292,29 @@ export default function StudiesView({ onNavigateToBible, onError, onToast, openS
         });
     };
 
+    // The main process re-reads the study and shows the save or print dialog. A note being
+    // edited is saved on blur (clicking Export), and that save reaches main first.
+    const exportStudy = async (format: StudyExportFormat) => {
+        setExportMenu(false);
+        if (!detail || busy) return;
+        setBusy(true);
+        try {
+            const result = await window.electronAPI.exportStudy(detail.id, translationId, format);
+            if (!result.ok) {
+                onError?.(result.error);
+            } else if (result.value.status === 'saved') {
+                const name = (result.value.filePath ?? '').split(/[\\/]/).pop() || 'file';
+                onToast?.(`Saved \u201C${name}\u201D`);
+            } else if (result.value.status === 'printed') {
+                onToast?.('Sent to the printer');
+            }
+        } catch {
+            onError?.('Could not export the study.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
     const renderDetail = () => {
         if (form) return renderForm();
         if (!detail) {
@@ -320,6 +344,31 @@ export default function StudiesView({ onNavigateToBible, onError, onToast, openS
                                 <option key={t.id} value={t.id}>{t.name || t.code}</option>
                             ))}
                         </select>
+                        <div className="study-export">
+                            <button
+                                type="button"
+                                className="study-export-btn"
+                                aria-haspopup="menu"
+                                aria-expanded={exportMenu}
+                                disabled={busy}
+                                onClick={() => setExportMenu((open) => !open)}
+                            >
+                                Export
+                            </button>
+                            {exportMenu && (
+                                <div className="study-export-menu" role="menu">
+                                    <button type="button" role="menuitem" className="study-export-pdf" onClick={() => void exportStudy('pdf')}>
+                                        Save as PDF…
+                                    </button>
+                                    <button type="button" role="menuitem" className="study-export-txt" onClick={() => void exportStudy('txt')}>
+                                        Save as text (.txt)…
+                                    </button>
+                                    <button type="button" role="menuitem" className="study-export-print" onClick={() => void exportStudy('print')}>
+                                        Print…
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button
                             type="button"
                             className="study-rename-btn"

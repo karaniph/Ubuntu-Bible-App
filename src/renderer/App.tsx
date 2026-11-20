@@ -43,6 +43,8 @@ export default function App() {
     const [navTarget, setNavTarget] = useState<NavigationTarget | null>(null);
     // The study that was open, so coming back from the reader shows it again.
     const [openStudyId, setOpenStudyId] = useState<number | null>(null);
+    // Reader commentary panel; in memory only, like openStudyId.
+    const [commentaryOpen, setCommentaryOpen] = useState(false);
 
     const showToast = (message: string) => {
         const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -94,6 +96,8 @@ export default function App() {
                         onError={showToast}
                         onToast={showToast}
                         settings={settings}
+                        commentaryOpen={commentaryOpen}
+                        onToggleCommentary={() => setCommentaryOpen((open) => !open)}
                     />
                 );
             case 'search':

@@ -3,6 +3,7 @@ import './SearchView.css';
 import { NavigationTarget } from '../App';
 import { BookLike, buildBookLookup, formatReference, parseReference } from '../lib/reference';
 import { loadLastRead, stripPilcrow } from '../lib/storage';
+import ConcordancePanel from './ConcordancePanel';
 
 interface Verse {
     id: number;
@@ -43,6 +44,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
     const [translationId, setTranslationId] = useState<number>(0);
     const [bookLookup, setBookLookup] = useState<Map<string, BookLike>>(new Map());
     const [refMessage, setRefMessage] = useState<string | null>(null);
+    const [mode, setMode] = useState<'search' | 'concordance'>('search');
 
     useEffect(() => {
         window.electronAPI.getBooks()
@@ -167,22 +169,44 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
         <div className="search-view">
             <div className="search-header">
                 <h1 className="search-title">Search Scripture</h1>
+                <div className="search-mode-tabs" role="tablist" aria-label="Search mode">
+                    <button
+                        type="button"
+                        role="tab"
+                        className={`search-mode-tab${mode === 'search' ? ' active' : ''}`}
+                        aria-selected={mode === 'search'}
+                        onClick={() => setMode('search')}
+                    >
+                        Search
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        className={`search-mode-tab${mode === 'concordance' ? ' active' : ''}`}
+                        aria-selected={mode === 'concordance'}
+                        onClick={() => setMode('concordance')}
+                    >
+                        Concordance
+                    </button>
+                </div>
                 <div className="search-controls">
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="Search for words, phrases, or verses..."
-                        aria-label="Search scripture"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && reference) {
-                                e.preventDefault();
-                                void goToReference();
-                            }
-                        }}
-                        autoFocus
-                    />
+                    {mode === 'search' && (
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Search for words, phrases, or verses..."
+                            aria-label="Search scripture"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && reference) {
+                                    e.preventDefault();
+                                    void goToReference();
+                                }
+                            }}
+                            autoFocus
+                        />
+                    )}
                     <select
                         className="search-translation-select"
                         aria-label="Translation to search"
@@ -196,6 +220,11 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
                 </div>
             </div>
 
+            {mode === 'concordance' && (
+                <ConcordancePanel translationId={translationId} onNavigateToBible={onNavigateToBible} onError={onError} />
+            )}
+
+            {mode === 'search' && (
             <div className="search-results">
                 {reference && (
                     <>
@@ -239,6 +268,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
                     ))}
                 </ul>
             </div>
+            )}
         </div>
     );
 }

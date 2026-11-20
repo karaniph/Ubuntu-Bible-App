@@ -15,6 +15,34 @@
     margin: 0 0 20px 0;
 }
 
+.search-mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin: -8px 0 16px;
+}
+
+.search-mode-tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.search-mode-tab:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+.search-mode-tab.active {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
 .search-controls {
     display: flex;
     gap: 10px;

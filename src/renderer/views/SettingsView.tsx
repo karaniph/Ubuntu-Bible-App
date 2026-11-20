@@ -138,6 +138,10 @@ export default function SettingsView({ settings, onSettingsChange }: SettingsVie
                     >
                         Privacy Policy
                     </a>
+                    <h3 className="about-credits-title">Credits</h3>
+                    <p className="description about-credit">
+                        Matthew Henry's Concise Commentary. Text: Christian Classics Ethereal Library via CrossWire Bible Society. Public domain.
+                    </p>
                 </div>
             </section>
 
