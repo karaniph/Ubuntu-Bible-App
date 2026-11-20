@@ -123,6 +123,22 @@
     background-color: var(--highlight-pink);
 }
 
+.verse-row.highlight-orange {
+    background-color: var(--highlight-orange);
+}
+
+.verse-row.highlight-purple {
+    background-color: var(--highlight-purple);
+}
+
+.verse-row.highlight-red {
+    background-color: var(--highlight-red);
+}
+
+.verse-row.highlight-teal {
+    background-color: var(--highlight-teal);
+}
+
 /* Context Menu */
 .context-menu {
     position: fixed;
@@ -167,9 +183,10 @@
 }
 
 .picker-colors {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(5, 28px);
     gap: 10px;
-    justify-content: space-between;
+    justify-content: start;
     padding: 4px;
 }
 
@@ -279,6 +296,26 @@
 .color-option.pink {
     background-color: #e91e63;
     box-shadow: 0 0 8px rgba(233, 30, 99, 0.4);
+}
+
+.color-option.orange {
+    background-color: #ff9800;
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.4);
+}
+
+.color-option.purple {
+    background-color: #9c27b0;
+    box-shadow: 0 0 8px rgba(156, 39, 176, 0.4);
+}
+
+.color-option.red {
+    background-color: #f44336;
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
+}
+
+.color-option.teal {
+    background-color: #009688;
+    box-shadow: 0 0 8px rgba(0, 150, 136, 0.4);
 }
 
 .color-option.clear {
@@ -413,4 +450,293 @@
     display: flex;
     align-items: center;
     gap: 12px;
+}
+/* Reader display settings (set inline on .verses-container) */
+.verse-text {
+    font-size: var(--reader-font-size, 1.1rem);
+    line-height: var(--reader-line-height, 1.85);
+}
+
+.verse-row {
+    line-height: var(--reader-line-height, 1.85);
+}
+
+/* Paragraph start (from the KJV pilcrow) becomes real spacing */
+.verse-row.paragraph-start:not(:first-child) {
+    margin-top: 28px;
+}
+
+/* Paragraph reading mode: verses flow inline like a printed Bible */
+.reading-paragraph {
+    margin: 0 0 1.25em;
+    padding: 0 12px;
+    line-height: var(--reader-line-height, 1.85);
+    text-align: left;
+}
+
+.verse-row.verse-inline {
+    display: inline;
+    margin: 0;
+    padding: 2px 0;
+    border-radius: 4px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+
+.verse-inline .verse-number {
+    margin-right: 3px;
+}
+
+/* Context menu: copy button */
+.menu-copy-btn {
+    padding: 8px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu-copy-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+/* Verse jump focus: a soft violet wash and edge bar, clearly unlike the
+   yellow/green/blue/pink saved highlights. Purely visual; fades in ~3s. */
+@property --focus-alpha {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
+
+.theme-light .verse-row.verse-focus { --focus-rgb: 103 58 183; }
+.theme-dark .verse-row.verse-focus { --focus-rgb: 179 157 219; }
+.theme-sepia .verse-row.verse-focus { --focus-rgb: 94 53 177; }
+
+.verse-row.verse-focus {
+    --focus-alpha: 1;
+    background-image: linear-gradient(
+        rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.22)),
+        rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.22))
+    );
+    box-shadow: inset 4px 0 0 rgb(var(--focus-rgb) / var(--focus-alpha)),
+        0 0 0 2px rgb(var(--focus-rgb) / calc(var(--focus-alpha) * 0.45));
+    animation: verseFocusFade 3s ease-in forwards;
+}
+
+@keyframes verseFocusFade {
+    0%, 55% { --focus-alpha: 1; }
+    100% { --focus-alpha: 0; }
+}
+
+/* Multi-verse selection: an accent outline, so the highlight colour underneath
+   stays visible and it never looks like the violet jump focus. UI only. */
+.verse-row.verse-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+.verse-row.verse-inline.verse-selected {
+    outline-offset: 0;
+}
+
+/* Verse numbers on highlighted rows use the main text colour at full opacity, so they
+   stay readable on every highlight (WCAG ratio, highlight at 0.4 over the page colour):
+   light 7.25+ (lowest purple), sepia 5.42+ (purple), dark 5.90+ (orange); on the dark
+   theme's light yellow wash the number is white (5.27). Covers verse and paragraph mode.
+   The selected-row rule below has the same specificity and comes later, so selected
+   numbers keep their accent chip. */
+.verse-row.highlight-yellow .verse-number,
+.verse-row.highlight-green .verse-number,
+.verse-row.highlight-blue .verse-number,
+.verse-row.highlight-pink .verse-number,
+.verse-row.highlight-orange .verse-number,
+.verse-row.highlight-purple .verse-number,
+.verse-row.highlight-red .verse-number,
+.verse-row.highlight-teal .verse-number {
+    color: var(--text-primary);
+    opacity: 1;
+}
+.theme-dark .verse-row.highlight-yellow:not(.verse-selected) .verse-number {
+    color: #ffffff;
+}
+.verse-row.verse-selected .verse-number {
+    background-color: var(--accent);
+    color: var(--bg-primary);
+    opacity: 1;
+}
+
+.verse-text-selectable {
+    cursor: pointer;
+}
+
+.selection-toolbar {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+}
+
+.selection-count {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.selection-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.selection-toolbar .color-option {
+    padding: 0;
+}
+
+.selection-toolbar .color-option:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.selection-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.selection-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+}
+
+.selection-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.study-picker {
+    position: absolute;
+    right: 24px;
+    bottom: calc(100% + 6px);
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 480px;
+    padding: 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.study-picker-select,
+.study-picker-name {
+    padding: 6px 10px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.study-picker-select {
+    max-width: 220px;
+}
+/* Commentary toggle and panel (Matthew Henry's Concise Commentary) */
+.commentary-toggle {
+    padding: 8px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.commentary-toggle:hover {
+    border-color: var(--accent);
+}
+.commentary-toggle[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.commentary-panel {
+    width: 340px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-subtle);
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+.commentary-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+.commentary-subheading {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0 0 4px;
+}
+.commentary-caption,
+.commentary-empty,
+.commentary-unavailable,
+.commentary-loading {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0 0 12px;
+}
+.commentary-note {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+.commentary-note.active {
+    outline: 2px solid var(--accent);
+    background: var(--accent-muted);
+}
+.commentary-note p {
+    margin: 0 0 8px;
+}
+.commentary-note .mh-title {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+}
+.commentary-note table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    margin: 0 0 6px;
+}
+.commentary-note td {
+    padding: 3px 6px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.commentary-note td:last-child {
+    white-space: nowrap;
+    text-align: right;
+    color: var(--text-secondary);
 }
