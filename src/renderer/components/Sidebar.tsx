@@ -1,6 +1,6 @@
 import './Sidebar.css';
 
-type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'settings';
+type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'studies' | 'settings';
 
 interface SidebarProps {
     currentView: View;
@@ -13,6 +13,7 @@ const navItems: { view: View; label: string; icon: string }[] = [
     { view: 'favorites', label: 'Favorites', icon: '⭐' },
     { view: 'search', label: 'Search', icon: '🔍' },
     { view: 'plans', label: 'Plans', icon: '📚' },
+    { view: 'studies', label: 'Studies', icon: '📝' },
     { view: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
@@ -35,18 +36,6 @@ export default function Sidebar({ currentView, onNavigate }: SidebarProps) {
                     </li>
                 ))}
             </ul>
-            <div className="sidebar-footer">
-                <a
-                    href="https://buymeacoffee.com/karaniph"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        window.electronAPI.openExternal('https://buymeacoffee.com/karaniph');
-                    }}
-                    className="support-link"
-                >
-                    ☕ Support
-                </a>
-            </div>
         </nav>
     );
 }
