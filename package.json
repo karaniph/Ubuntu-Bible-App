@@ -1,6 +1,6 @@
 {
     "name": "bible-app",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "The Ultimate Offline Bible App for Study and Reflection",
     "main": "dist/main/main.js",
     "scripts": {
@@ -89,7 +89,7 @@
             {
                 "from": "assets",
                 "to": "assets",
-                "filter": ["bible.db"]
+                "filter": ["bible.db", "study.db"]
             }
         ]
     }

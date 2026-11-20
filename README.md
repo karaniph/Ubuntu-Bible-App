@@ -14,6 +14,9 @@ The Ultimate Offline Bible App for Study & Reflection — built with Electron + 
 - 📋 **Copy Verse** — Right-click a verse to copy it with its reference, e.g. “…” John 3:16 (KJV)
 - 📄 **Cleaner Reading Mode** — Paragraph breaks instead of ¶ symbols, optional verse numbers, and a paragraph layout like a printed Bible
 - 📝 **Bible Studies** — Create named studies (e.g. "Wednesday Bible Study") and add passages like `Psalms 1-7`, `Romans 8` or `John 3:16-21`; each passage has its own notes, can be reordered, and reads in any of the 7 translations
+- 📤 **Export Studies** — Save a study as PDF or plain text (.txt), or print it; files are saved only where you choose
+- 📚 **Concordance** — In Search, switch to Concordance for an A-Z word list and every verse a word appears in, with counts per book, in all 7 translations
+- 💬 **Matthew Henry's Concise Commentary** — Open Commentary in the reader for the current chapter's notes; the note for the verse you click is highlighted
 - ✅ **Select Many Verses** — Click verse numbers (or the verse text when numbers are hidden or in paragraph mode), Shift-click to select a run, then highlight, copy or add them to a study in one go
 - 🎨 **8 Highlight Colours** — Yellow, green, blue, pink, orange, purple, red and teal
 - ✍️ **Journaling** — Write reflections on verses
@@ -122,6 +125,8 @@ users stay on matching versions as long as releases are cut from the same tag.
 
 ## Bible Text Credits
 All Bible translations included are in the public domain. The Berean Standard Bible (BSB) text comes from the publisher's official download at [bereanbible.com](https://bereanbible.com) (https://bereanbible.com/bsb.txt, 3rd printing, fetched 2026-11-04). The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain ([terms](https://berean.bible/terms.htm)). The other translations come from [eBible.org](https://ebible.org). Scripts that build and audit the Bible database are in `tools/bible-db/`.
+
+Matthew Henry's Concise Commentary. Text: Christian Classics Ethereal Library via CrossWire Bible Society. Public domain. Build scripts for the concordance word list and commentary (`assets/study.db`) are in `tools/study-db/`. See also `CREDITS`.
 
 ## License
 MIT

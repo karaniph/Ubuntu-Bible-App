@@ -22,6 +22,10 @@ is stored **locally only** on your device. None of this data ever leaves your de
 
 Highlights, topics, reflections, and Bible studies are stored in a local SQLite database in the App's per-user application data folder. Reading plan progress, display preferences, and your last reading position are stored in the App's local browser storage in the same folder. Both are accessible only to your own operating system user account under normal file permissions. The data is not encrypted at rest.
 
+When you export a study (PDF or text file), the App saves the file only where you choose in the save dialog. Nothing is transmitted.
+
+The concordance word list and Matthew Henry's Concise Commentary are bundled with the App as a read-only file. They contain no user data, and the App never writes to them.
+
 ## 3. Data Sharing
 
 Bible App does not share, sell, or transmit any user data to third parties, advertisers, or analytics services. The App contains no analytics, tracking, or advertising libraries.
