@@ -36,18 +36,6 @@ export default function Sidebar({ currentView, onNavigate }: SidebarProps) {
                     </li>
                 ))}
             </ul>
-            <div className="sidebar-footer">
-                <a
-                    href="https://buymeacoffee.com/karaniph"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        window.electronAPI.openExternal('https://buymeacoffee.com/karaniph');
-                    }}
-                    className="support-link"
-                >
-                    ☕ Support
-                </a>
-            </div>
         </nav>
     );
 }

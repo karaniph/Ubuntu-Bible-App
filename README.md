@@ -110,18 +110,14 @@ The CI publish step uses Microsoft's official Store CLI (`msstore`) and can only
 - **10.5.1 Personal Information** — the app stores journal reflections/highlights locally in SQLite; nothing is transmitted. See [`PRIVACY.md`](./PRIVACY.md), linked from Settings → About inside the app, and must also be entered as the privacy policy URL in Partner Center.
 - **10.1.1 Accurate representation** — app name, icon, and description must match actual functionality (offline Bible reader with 7 English translations).
 - **10.4.2 Usability** — app must start promptly and handle errors gracefully; the existing `startupState: 'error'` fallback in `App.tsx` already covers DB init failures.
-- **10.8.2 Voluntary donations** — the app has no purchases, subscriptions, or in-app currency. "Buy Me a Coffee" is a voluntary tip that unlocks nothing, so the Microsoft Store purchase API isn't required. Tips go through Buy Me a Coffee (a secure third-party payment provider) in the user's own browser; the app never handles payment details.
-  - **At submission:** mention this in Partner Center's **Notes for certification**, e.g. "Optional 'Buy Me a Coffee' tip link opens buymeacoffee.com in the user's browser. Tips are voluntary and unlock no features or content."
-  - **Keep it that way:** if a tip ever unlocks anything (features, removing a prompt, extra content), Store policy requires switching to the Microsoft Store in-app purchase API.
-
 ### Version parity with the Snap
 
 Both targets build from the same `version` field in `package.json`, so Linux and Windows
 users stay on matching versions as long as releases are cut from the same tag.
 
-## Support
+## Feedback
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/karaniph)
+Suggestions, questions or need help? Email [karanidevops@gmail.com](mailto:karanidevops@gmail.com) (also in the app under Settings → Contact & feedback), or open an issue on GitHub.
 
 ## Bible Text Credits
 All Bible translations included are in the public domain. The Berean Standard Bible (BSB) text comes from the publisher's official download at [bereanbible.com](https://bereanbible.com) (https://bereanbible.com/bsb.txt, 3rd printing, fetched 2026-11-04). The Holy Bible, Berean Standard Bible, BSB is produced in cooperation with Bible Hub, Discovery Bible, OpenBible.com, and the Berean Bible Translation Committee. This text of God's Word has been dedicated to the public domain ([terms](https://berean.bible/terms.htm)). The other translations come from [eBible.org](https://ebible.org). Scripts that build and audit the Bible database are in `tools/bible-db/`.

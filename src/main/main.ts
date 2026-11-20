@@ -6,6 +6,7 @@ import { initStudyDatabase, getStudyDatabase, getStudyDataStatus } from './study
 import { listConcordanceWords, lookupConcordance, getConcordanceVerses } from './concordance';
 import { getCommentaryChapter } from './commentary';
 import { exportStudy } from './studyExport';
+import { FEEDBACK_EMAIL, FEEDBACK_MAILTO, FEEDBACK_SUBJECT } from './feedback';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
@@ -70,7 +71,7 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
     }
 
-    // Web links (donations, privacy policy) must open in the user's browser, where
+    // Web links (privacy policy) must open in the user's browser, where
     // they can see the real address, never in an app window without one.
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
         void openInBrowser(url);
@@ -107,8 +108,27 @@ async function openInBrowser(url: string) {
     }
 }
 
+// The only non-web link the app opens: the feedback email in the user's own mail app.
+// Accepted only when the recipient is exactly FEEDBACK_EMAIL and the sole parameter is
+// our subject (no other recipients, cc, bcc or body). The canonical URL is opened.
+async function openFeedbackEmail(url: unknown): Promise<boolean> {
+    if (typeof url !== 'string' || url.length > 200) return false;
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return false;
+    }
+    if (parsed.protocol !== 'mailto:' || parsed.pathname !== FEEDBACK_EMAIL || parsed.hash) return false;
+    const keys = [...parsed.searchParams.keys()];
+    if (keys.length !== 1 || keys[0] !== 'subject' || parsed.searchParams.get('subject') !== FEEDBACK_SUBJECT) return false;
+    await shell.openExternal(FEEDBACK_MAILTO);
+    return true;
+}
+
 function registerIpcHandlers() {
     ipcMain.handle('app:openExternal', async (_, url: string) => openInBrowser(url));
+    ipcMain.handle('app:openFeedbackEmail', async (_, url: unknown) => openFeedbackEmail(url));
     // Plain-text clipboard bridge for "Copy verse". Only non-empty strings of a
     // sane size are accepted; nothing else can be written from the renderer.
     ipcMain.handle('app:copyText', (_, text: unknown) => {

@@ -32,7 +32,7 @@ Bible App does not share, sell, or transmit any user data to third parties, adve
 
 ## 4. External Links
 
-The App contains links (for example, this Privacy Policy and an optional "Buy Me a Coffee" support page) that open in your web browser. Those websites have their own privacy policies. The App does not send any of your data to them.
+The App contains links (for example, this Privacy Policy) that open in your web browser. Those websites have their own privacy policies. The App does not send any of your data to them.
 
 
 ## 5. Deleting Your Data
@@ -50,4 +50,6 @@ If a future version adds a feature that collects or transmits personal informati
 
 ## 8. Contact
 
-For privacy questions, open an issue on the project's GitHub repository: https://github.com/karaniph/Ubuntu-Bible-App/issues
+For privacy questions or suggestions, email karanidevops@gmail.com or open an issue on the project's GitHub repository: https://github.com/karaniph/Ubuntu-Bible-App/issues
+
+The email link in Settings opens your own mail app with a new message; the App itself sends nothing.

@@ -1,6 +1,7 @@
 import React from 'react';
 import './SettingsView.css';
 import { AppSettings, LineSpacing, ReadingMode, TEXT_SIZES } from '../lib/storage';
+import { FEEDBACK_EMAIL, FEEDBACK_MAILTO } from '../../main/feedback';
 
 interface SettingsViewProps {
     settings: AppSettings;
@@ -25,16 +26,44 @@ const themes = [
     { id: 'sepia', label: 'Sepia', icon: '📜' },
 ] as const;
 
-export default function SettingsView({ settings, onSettingsChange }: SettingsViewProps) {
+export default function SettingsView({ settings, onSettingsChange, onToast }: SettingsViewProps) {
     const { theme } = settings;
     const openLink = (url: string) => (e: React.MouseEvent) => {
         e.preventDefault();
         window.electronAPI.openExternal(url);
     };
+    // Opens the user's own mail app; the main process only accepts this exact mailto: URL.
+    const openFeedbackEmail = (e: React.MouseEvent) => {
+        e.preventDefault();
+        void window.electronAPI.openFeedbackEmail(FEEDBACK_MAILTO);
+    };
+    // For users without a mail app.
+    const copyEmail = async () => {
+        let ok = false;
+        try {
+            ok = await window.electronAPI.copyText(FEEDBACK_EMAIL);
+        } catch {
+            ok = false;
+        }
+        onToast?.(ok ? 'Copied' : 'Could not copy the email address.');
+    };
 
     return (
         <div className="settings-view">
             <h1 className="settings-title">Settings</h1>
+
+            <section className="settings-section contact-section" aria-labelledby="contact-title">
+                <h2 className="section-title" id="contact-title">Contact &amp; feedback</h2>
+                <p className="contact-text">Have a suggestion or need help? Email me:</p>
+                <div className="contact-row">
+                    <a href={FEEDBACK_MAILTO} onClick={openFeedbackEmail} className="contact-email">
+                        {FEEDBACK_EMAIL}
+                    </a>
+                    <button type="button" className="backup-button contact-copy-btn" onClick={() => void copyEmail()}>
+                        Copy email
+                    </button>
+                </div>
+            </section>
 
             <section className="settings-section">
                 <h2 className="section-title">Appearance</h2>
@@ -143,22 +172,6 @@ export default function SettingsView({ settings, onSettingsChange }: SettingsVie
                         Matthew Henry's Concise Commentary. Text: Christian Classics Ethereal Library via CrossWire Bible Society. Public domain.
                     </p>
                 </div>
-            </section>
-
-
-            <section className="settings-section">
-                <h2 className="section-title">Support</h2>
-
-                <a
-                    href="https://buymeacoffee.com/karaniph"
-                    onClick={openLink('https://buymeacoffee.com/karaniph')}
-                    className="support-button"
-                >
-                    ☕ Buy Me a Coffee
-                </a>
-                <p className="support-text">
-                    Help keep this spiritual companion free and growing.
-                </p>
             </section>
         </div>
     );

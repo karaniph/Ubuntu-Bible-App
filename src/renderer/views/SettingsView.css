@@ -113,26 +113,32 @@
     font-weight: 600;
     color: var(--text-primary);
 }
-.support-button {
-    display: inline-block;
-    padding: 12px 24px;
-    background: #ffdd00;
-    color: #000;
-    text-decoration: none;
-    border-radius: 8px;
+
+/* Contact & feedback: body-size, selectable text in --text-primary (the accent colour
+   is under 4.5:1 on the light and sepia backgrounds). */
+.contact-text {
+    color: var(--text-primary);
+    margin: 0 0 8px;
+}
+
+.contact-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.contact-email {
+    color: var(--text-primary);
+    font-size: 1rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    transition: transform 0.2s;
+    text-decoration: underline;
+    user-select: text;
+    word-break: break-all;
 }
 
-.support-button:hover {
-    transform: scale(1.02);
-}
-
-.support-text {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-top: 12px;
+.contact-email:hover {
+    text-decoration-thickness: 2px;
 }
 
 .backup-hint {
