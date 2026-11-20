@@ -15,6 +15,18 @@ export interface ParsedReference {
     verseEnd?: number;
 }
 
+// A study passage: whole chapters (chapterStart..chapterEnd) or a verse range in one chapter.
+export interface PassageReference {
+    book: BookLike;
+    chapterStart: number;
+    chapterEnd: number;
+    verseStart?: number;
+    verseEnd?: number;
+}
+
+// Books with a single chapter, where "Jude 1-7" or "Jude 5" means verses, not chapters.
+export const SINGLE_CHAPTER_BOOKS = new Set(['OBA', 'PHM', '2JN', '3JN', 'JUD']);
+
 // Extra names per USFM code. Keys are lowercase with spaces/dots removed.
 const ALIASES: Record<string, string[]> = {
     GEN: ['gen', 'ge', 'gn'],
@@ -100,10 +112,11 @@ export function buildBookLookup(books: BookLike[]): Map<string, BookLike> {
     return map;
 }
 
-// optional book number, book name, chapter, optional :verse and -verseEnd
-const REF_PATTERN = /^([1-3])?\s*([a-z][a-z .]*?)\s*(\d{1,3})(?:\s*[:.]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?)?$/;
+// optional book number, book name, chapter, then either :verse with optional -verseEnd,
+// or -chapterEnd (a chapter range, used only by study passages)
+const REF_PATTERN = /^([1-3])?\s*([a-z][a-z .]*?)\s*(\d{1,3})(?:\s*[:.]\s*(\d{1,3})(?:\s*-\s*(\d{1,3}))?|\s*-\s*(\d{1,3}))?$/;
 
-export function parseReference(input: string, lookup: Map<string, BookLike>): ParsedReference | null {
+function matchReference(input: string, lookup: Map<string, BookLike>) {
     const text = input
         .toLowerCase()
         .replace(/[\u2010-\u2015]/g, '-')
@@ -112,9 +125,17 @@ export function parseReference(input: string, lookup: Map<string, BookLike>): Pa
     // Roman numeral prefixes ("ii kings", "iii john") are not supported on purpose.
     const m = REF_PATTERN.exec(text);
     if (!m) return null;
-    const [, num, name, chapterStr, verseStr, endStr] = m;
+    const [, num, name, chapterStr, verseStr, endStr, rangeEndStr] = m;
     const book = lookup.get(squash((num || '') + name));
     if (!book) return null;
+    return { book, chapterStr, verseStr, endStr, rangeEndStr };
+}
+
+export function parseReference(input: string, lookup: Map<string, BookLike>): ParsedReference | null {
+    const m = matchReference(input, lookup);
+    // "Psalms 1-7" (a chapter range) stays a text search here, as before.
+    if (!m || m.rangeEndStr !== undefined) return null;
+    const { book, chapterStr, verseStr, endStr } = m;
     const chapter = parseInt(chapterStr, 10);
     const result: ParsedReference = { book, chapter };
     if (verseStr !== undefined) {
@@ -133,4 +154,67 @@ export function formatReference(ref: ParsedReference): string {
         if (ref.verseEnd !== undefined && ref.verseEnd !== ref.verse) s += `-${ref.verseEnd}`;
     }
     return s;
+}
+
+/**
+ * Parses a study passage: "Psalms 1-7" (chapters), "Romans 8", "John 3:16-21", "John 3:16".
+ * In single-chapter books the numbers are verses: "Jude 1-7" is Jude 1:1-7 and "Jude 5" is
+ * Jude 1:5, while "Jude 1" is the whole book. Returns null for anything it can't read.
+ */
+export function parsePassage(input: string, lookup: Map<string, BookLike>): PassageReference | null {
+    const m = matchReference(input, lookup);
+    if (!m) return null;
+    const { book, chapterStr, verseStr, endStr, rangeEndStr } = m;
+    const nums = [chapterStr, verseStr, endStr, rangeEndStr]
+        .map((s) => (s === undefined ? undefined : parseInt(s, 10)));
+    if (nums.some((n) => n === 0)) return null;
+    const [first, verse, verseEnd, rangeEnd] = nums;
+    const ordered = (a: number, b: number) => (a <= b ? [a, b] : [b, a]);
+
+    if (verse !== undefined) {
+        const [vs, ve] = ordered(verse, verseEnd ?? verse);
+        return { book, chapterStart: first!, chapterEnd: first!, verseStart: vs, verseEnd: ve };
+    }
+    if (SINGLE_CHAPTER_BOOKS.has(book.code)) {
+        if (rangeEnd !== undefined) {
+            const [vs, ve] = ordered(first!, rangeEnd);
+            return { book, chapterStart: 1, chapterEnd: 1, verseStart: vs, verseEnd: ve };
+        }
+        if (first === 1) return { book, chapterStart: 1, chapterEnd: 1 };
+        return { book, chapterStart: 1, chapterEnd: 1, verseStart: first, verseEnd: first };
+    }
+    const [cs, ce] = ordered(first!, rangeEnd ?? first!);
+    return { book, chapterStart: cs, chapterEnd: ce };
+}
+
+/** "Psalms 1-7", "Romans 8", "John 3:16-21", "John 3:16". */
+export function formatPassage(
+    bookName: string,
+    chapterStart: number,
+    chapterEnd: number,
+    verseStart?: number | null,
+    verseEnd?: number | null,
+): string {
+    if (verseStart === undefined || verseStart === null) {
+        return chapterEnd !== chapterStart ? `${bookName} ${chapterStart}-${chapterEnd}` : `${bookName} ${chapterStart}`;
+    }
+    const end = verseEnd !== undefined && verseEnd !== null && verseEnd !== verseStart ? `-${verseEnd}` : '';
+    return `${bookName} ${chapterStart}:${verseStart}${end}`;
+}
+
+/** Sorted runs of consecutive numbers: [5, 1, 2, 3] -> [[1, 3], [5, 5]]. */
+export function verseRuns(nums: number[]): Array<[number, number]> {
+    const sorted = [...new Set(nums)].sort((a, b) => a - b);
+    const runs: Array<[number, number]> = [];
+    for (const n of sorted) {
+        const last = runs[runs.length - 1];
+        if (last && n === last[1] + 1) last[1] = n;
+        else runs.push([n, n]);
+    }
+    return runs;
+}
+
+/** [[1, 3], [5, 5]] -> "1-3, 5". */
+export function formatVerseRuns(runs: Array<[number, number]>): string {
+    return runs.map(([a, b]) => (a === b ? `${a}` : `${a}-${b}`)).join(', ');
 }
