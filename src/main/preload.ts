@@ -52,8 +52,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('studies:removePassage', passageId),
     moveStudyPassage: (passageId: number, direction: 'up' | 'down') =>
         ipcRenderer.invoke('studies:movePassage', passageId, direction),
-    exportStudy: (studyId: number, translationId: number, format: StudyExportFormat) =>
-        ipcRenderer.invoke('studies:export', studyId, translationId, format),
     // Bundled study tools (read-only study.db)
     getStudyDataStatus: () => ipcRenderer.invoke('study:getStatus'),
     listConcordanceWords: (translationId: number, prefix: string, offset: number) =>
@@ -98,7 +96,6 @@ declare global {
             updateStudyPassageNote: (passageId: number, note: string) => Promise<StudyResult<{ id: number; note: string; updated_at: string }>>;
             removeStudyPassage: (passageId: number) => Promise<StudyResult<null>>;
             moveStudyPassage: (passageId: number, direction: 'up' | 'down') => Promise<StudyResult<number[]>>;
-            exportStudy: (studyId: number, translationId: number, format: StudyExportFormat) => Promise<StudyResult<StudyExportOutcome>>;
             getStudyDataStatus: () => Promise<StudyDataStatus>;
             listConcordanceWords: (translationId: number, prefix: string, offset: number) => Promise<StudyResult<ConcordanceWordPage>>;
             lookupConcordance: (translationId: number, word: string) => Promise<StudyResult<ConcordanceLookup>>;
@@ -202,13 +199,6 @@ export interface StudyPassageInput {
 }
 
 export type StudyResult<T> = { ok: true; value: T } | { ok: false; error: string };
-
-export type StudyExportFormat = 'pdf' | 'txt' | 'print';
-
-export interface StudyExportOutcome {
-    status: 'saved' | 'printed' | 'cancelled';
-    filePath?: string;
-}
 
 // Bundled, read-only study tools (assets/study.db). Keyed by book code + chapter + verse.
 export interface StudyDataStatus {

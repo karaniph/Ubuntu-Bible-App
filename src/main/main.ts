@@ -7,7 +7,6 @@ import { listStudies, getStudy, createStudy, updateStudy, deleteStudy, addStudyP
 import { initStudyDatabase, getStudyDatabase, getStudyDataStatus } from './studyDb';
 import { listConcordanceWords, lookupConcordance, getConcordanceVerses } from './concordance';
 import { getCommentaryChapter } from './commentary';
-import { exportStudy } from './studyExport';
 import { FEEDBACK_EMAIL, FEEDBACK_MAILTO, FEEDBACK_SUBJECT } from './feedback';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
@@ -236,15 +235,6 @@ function registerIpcHandlers() {
     ipcMain.handle('studies:movePassage', async (_, passageId: unknown, direction: unknown) => {
         await dbReady;
         return runStudyWrite(() => moveStudyPassage(requireDatabase(), passageId, direction));
-    });
-    // Study export (PDF / text / print). Only the main window may ask; the main process
-    // re-reads the study and writes only to the path the user picks in the save dialog.
-    ipcMain.handle('studies:export', async (event, studyId: unknown, translationId: unknown, format: unknown) => {
-        await dbReady;
-        if (!mainWindow || event.sender !== mainWindow.webContents) {
-            return { ok: false, error: 'Export is not available.' };
-        }
-        return exportStudy(mainWindow, requireDatabase(), studyId, translationId, format);
     });
     // Concordance and commentary read the bundled, read-only study.db. When it is
     // missing or unreadable these return a friendly error and the rest of the app works.

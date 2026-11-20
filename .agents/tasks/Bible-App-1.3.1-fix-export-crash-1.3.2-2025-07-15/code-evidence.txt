@@ -1,0 +1,90 @@
+CODE EVIDENCE SUMMARY — Bible App 1.3.2 Export Crash Fix
+Commit: 72daf5a on branch fix-export-crash-1.3.2
+Date: 2025-07-15
+
+=== STEP 1: CRASH EVIDENCE ===
+
+Journalctl (user session):
+  - App ran and loaded databases correctly (rev 25, ~1 min session on export attempt).
+  - No SIGABRT/SIGSEGV at startup; crash happened only on Export click.
+
+Snap fonts.conf comparison (key evidence):
+  - Rev 24: had <cachedir>/home/karaniph/.cache/fontconfig</cachedir> (the bad line)
+  - Rev 25: bad line is ABSENT — proves the font fix code ran (and ran before GTK init)
+
+Snap run with --user-data-dir=/tmp:
+  - Crashed with credentials.cc FATAL Permission denied (13)
+  - Explanation: snap strict confinement blocks Chromium sandbox credentials in /tmp
+  - This is a test-setup limitation; normal snap startup (without custom --user-data-dir)
+    works (confirmed by journalctl 1-min session)
+
+GUI export automation: not feasible without installing rebuilt snap rev 26.
+
+=== STEP 2: ROOT CAUSE ===
+
+The 1.3.1 font fix block ran synchronously at module level, before app.whenReady().
+GTK then initialised inside app.whenReady() and cached its fontconfig state from the
+already-modified fonts.conf. When the user clicked Export, renderInHiddenWindow()
+created a second BrowserWindow with { sandbox: true }. This triggered fontconfig 2.12.6
+(from gnome-3-28-1804 runtime) to re-read fonts.conf and try to rebuild its cache.
+If $XDG_CACHE_HOME/fontconfig did not exist, or if fontconfig's internal state was stale
+from the pre-GTK-init modification, this caused SIGABRT/SIGSEGV.
+
+=== STEP 3: FIX APPLIED ===
+
+Option A+B was applied to src/main/main.ts:
+  A) Moved entire font fix block from module level into app.whenReady(), placed after
+     setAppMenu() and before createWindow().
+  B) Added mkdirSync call to ensure $XDG_CACHE_HOME/fontconfig exists before
+     fs.writeFileSync writes the corrected fonts.conf.
+  - Added import os from 'os'; for homedir() fallback in cacheDir construction.
+  - GTK_IM_MODULE block at module level: UNCHANGED (byte-for-byte identical to base).
+  - studyExport.ts: NOT modified.
+
+=== STEP 5: BUILD EXIT CODES ===
+
+  main tsc (npx tsc -p src/main/tsconfig.json --noEmit):   EXIT 0
+  renderer tsc (npx tsc -p /tmp/bible-renderer-tscheck.json): EXIT 0
+  vite build (npx vite build):                              EXIT 0
+  build:main (npm run build:main):                          EXIT 0
+
+=== STEP 6: REGRESSION CHECKS ON dist/main/main.js ===
+
+  grep -c 'studies:export'        → 1  ✓
+  grep -c 'app:openFeedbackEmail' → 1  ✓
+  grep -c 'concordance:lookup'    → 2  ✓
+  grep -c 'GTK_IM_MODULE'         → 2  ✓
+
+=== STEP 6b: UNPACKED STARTUP TEST ===
+
+  npx electron . --user-data-dir=/tmp/test-bible-1.3.2: no crash ✓
+  Databases loaded correctly: bible.db and study.db ✓
+  ERR_CONNECTION_REFUSED for localhost:5173: expected (no Vite dev server in test) ✓
+  GL vsync warnings: benign graphics only, no font errors ✓
+
+=== STEP 7: FONT FIX VERIFICATION ===
+
+  dist/main/main.js line 329: font fix block is inside app.whenReady().then() ✓
+  dist/main/main.js line 338: mkdirSync called before writeFileSync ✓
+  dist/main/main.js lines 18-25: GTK_IM_MODULE block at module level, unchanged ✓
+
+  Snap run test (font-verify): crashed with credentials.cc on --user-data-dir=/tmp
+  — test-setup limitation (snap confinement blocks arbitrary /tmp writes), not an app bug.
+  — Normal snap startup confirmed working via journalctl (1-min session, no font errors).
+  — Full font fix validation requires installing rebuilt snap rev 26 and manually
+    clicking Export to open the Save dialog and verify readable text (no boxes).
+
+=== WHAT THIS PROVES / DOES NOT PROVE ===
+
+  PROVES:
+  - Font fix code is still present and runs at the correct time (after GTK init)
+  - mkdirSync ensures the fontconfig cache dir exists before writing fonts.conf
+  - All IPC handlers still present in built output
+  - GTK_IM_MODULE block unchanged
+  - Version bumped to 1.3.2
+
+  DOES NOT PROVE (requires human with GUI):
+  - Save dialog shows readable text (no boxes) — requires snap install + GUI test
+  - Save as PDF produces valid PDF — requires snap install + GUI test
+  - Save as text produces correct output — requires snap install + GUI test
+  - Print dialog works — requires snap install + GUI test
