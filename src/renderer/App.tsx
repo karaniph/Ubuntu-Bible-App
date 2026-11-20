@@ -3,7 +3,6 @@ import Sidebar from './components/Sidebar';
 import DailyHome from './views/DailyHome';
 import BibleView from './views/BibleView';
 import SettingsView from './views/SettingsView';
-import StoreView from './views/StoreView';
 import './styles/app.css';
 import type { Topic } from '../main/preload';
 import { AppSettings, loadSettings, saveSettings } from './lib/storage';
@@ -12,8 +11,9 @@ export type { Topic };
 const SearchView = lazy(() => import('./views/SearchView'));
 const FavoritesView = lazy(() => import('./views/FavoritesView'));
 const ReadingPlans = lazy(() => import('./views/ReadingPlans'));
+const StudiesView = lazy(() => import('./views/StudiesView'));
 
-type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'store' | 'settings';
+type View = 'daily' | 'bible' | 'search' | 'favorites' | 'plans' | 'studies' | 'settings';
 
 export interface NavigationTarget {
     bookId?: number;
@@ -41,6 +41,8 @@ export default function App() {
 
     // Shared state for Bible navigation
     const [navTarget, setNavTarget] = useState<NavigationTarget | null>(null);
+    // The study that was open, so coming back from the reader shows it again.
+    const [openStudyId, setOpenStudyId] = useState<number | null>(null);
 
     const showToast = (message: string) => {
         const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -100,8 +102,16 @@ export default function App() {
                 return <FavoritesView onNavigateToBible={handleNavigateToBible} onError={showToast} />;
             case 'plans':
                 return <ReadingPlans onNavigateToBible={handleNavigateToBible} onError={showToast} />;
-            case 'store':
-                return <StoreView />;
+            case 'studies':
+                return (
+                    <StudiesView
+                        onNavigateToBible={handleNavigateToBible}
+                        onError={showToast}
+                        onToast={showToast}
+                        openStudyId={openStudyId}
+                        onOpenStudy={setOpenStudyId}
+                    />
+                );
             case 'settings':
                 return <SettingsView settings={settings} onSettingsChange={updateSettings} onToast={showToast} />;
             default:
