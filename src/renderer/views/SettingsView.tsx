@@ -1,9 +1,24 @@
 import React from 'react';
-import './SettingsView.css'; interface SettingsViewProps {
-    theme: 'light' | 'dark' | 'sepia';
-    onThemeChange: (theme: 'light' | 'dark' | 'sepia') => void;
+import './SettingsView.css';
+import { AppSettings, LineSpacing, ReadingMode, TEXT_SIZES } from '../lib/storage';
+import { FEEDBACK_EMAIL, FEEDBACK_MAILTO } from '../../main/feedback';
+
+interface SettingsViewProps {
+    settings: AppSettings;
+    onSettingsChange: (patch: Partial<AppSettings>) => void;
     onToast?: (message: string) => void;
 }
+
+const spacings: Array<{ id: LineSpacing; label: string }> = [
+    { id: 'compact', label: 'Compact' },
+    { id: 'normal', label: 'Normal' },
+    { id: 'relaxed', label: 'Relaxed' },
+];
+
+const readingModes: Array<{ id: ReadingMode; label: string }> = [
+    { id: 'verses', label: 'Verse by verse' },
+    { id: 'paragraphs', label: 'Paragraphs' },
+];
 
 const themes = [
     { id: 'light', label: 'Light', icon: '☀️' },
@@ -11,15 +26,44 @@ const themes = [
     { id: 'sepia', label: 'Sepia', icon: '📜' },
 ] as const;
 
-export default function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
+export default function SettingsView({ settings, onSettingsChange, onToast }: SettingsViewProps) {
+    const { theme } = settings;
     const openLink = (url: string) => (e: React.MouseEvent) => {
         e.preventDefault();
         window.electronAPI.openExternal(url);
+    };
+    // Opens the user's own mail app; the main process only accepts this exact mailto: URL.
+    const openFeedbackEmail = (e: React.MouseEvent) => {
+        e.preventDefault();
+        void window.electronAPI.openFeedbackEmail(FEEDBACK_MAILTO);
+    };
+    // For users without a mail app.
+    const copyEmail = async () => {
+        let ok = false;
+        try {
+            ok = await window.electronAPI.copyText(FEEDBACK_EMAIL);
+        } catch {
+            ok = false;
+        }
+        onToast?.(ok ? 'Copied' : 'Could not copy the email address.');
     };
 
     return (
         <div className="settings-view">
             <h1 className="settings-title">Settings</h1>
+
+            <section className="settings-section contact-section" aria-labelledby="contact-title">
+                <h2 className="section-title" id="contact-title">Contact &amp; feedback</h2>
+                <p className="contact-text">Have a suggestion or need help? Email me:</p>
+                <div className="contact-row">
+                    <a href={FEEDBACK_MAILTO} onClick={openFeedbackEmail} className="contact-email">
+                        {FEEDBACK_EMAIL}
+                    </a>
+                    <button type="button" className="backup-button contact-copy-btn" onClick={() => void copyEmail()}>
+                        Copy email
+                    </button>
+                </div>
+            </section>
 
             <section className="settings-section">
                 <h2 className="section-title">Appearance</h2>
@@ -31,13 +75,75 @@ export default function SettingsView({ theme, onThemeChange }: SettingsViewProps
                             <button
                                 key={t.id}
                                 className={`theme-button ${theme === t.id ? 'active' : ''}`}
-                                onClick={() => onThemeChange(t.id)}
+                                aria-pressed={theme === t.id}
+                                onClick={() => onSettingsChange({ theme: t.id })}
                             >
                                 <span className="theme-icon">{t.icon}</span>
                                 <span className="theme-label">{t.label}</span>
                             </button>
                         ))}
                     </div>
+                </div>
+
+                <div className="setting-row">
+                    <label className="setting-label" htmlFor="text-size-range">Text size</label>
+                    <div className="range-control">
+                        <span className="range-small" aria-hidden="true">A</span>
+                        <input
+                            id="text-size-range"
+                            type="range"
+                            min={0}
+                            max={TEXT_SIZES.length - 1}
+                            step={1}
+                            value={settings.textSize}
+                            aria-valuetext={`Size ${settings.textSize + 1} of ${TEXT_SIZES.length}`}
+                            onChange={(e) => onSettingsChange({ textSize: Number(e.target.value) })}
+                        />
+                        <span className="range-large" aria-hidden="true">A</span>
+                    </div>
+                </div>
+
+                <div className="setting-row">
+                    <span className="setting-label" id="line-spacing-label">Line spacing</span>
+                    <div className="choice-buttons" role="group" aria-labelledby="line-spacing-label">
+                        {spacings.map((o) => (
+                            <button
+                                key={o.id}
+                                className={`choice-button ${settings.lineSpacing === o.id ? 'active' : ''}`}
+                                aria-pressed={settings.lineSpacing === o.id}
+                                onClick={() => onSettingsChange({ lineSpacing: o.id })}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="setting-row">
+                    <span className="setting-label" id="reading-mode-label">Reading layout</span>
+                    <div className="choice-buttons" role="group" aria-labelledby="reading-mode-label">
+                        {readingModes.map((o) => (
+                            <button
+                                key={o.id}
+                                className={`choice-button ${settings.readingMode === o.id ? 'active' : ''}`}
+                                aria-pressed={settings.readingMode === o.id}
+                                onClick={() => onSettingsChange({ readingMode: o.id })}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="setting-row">
+                    <label className="setting-label" htmlFor="verse-numbers-toggle">Show verse numbers</label>
+                    <input
+                        id="verse-numbers-toggle"
+                        type="checkbox"
+                        className="toggle-checkbox"
+                        checked={settings.showVerseNumbers}
+                        onChange={(e) => onSettingsChange({ showVerseNumbers: e.target.checked })}
+                    />
                 </div>
             </section>
 
@@ -61,23 +167,11 @@ export default function SettingsView({ theme, onThemeChange }: SettingsViewProps
                     >
                         Privacy Policy
                     </a>
+                    <h3 className="about-credits-title">Credits</h3>
+                    <p className="description about-credit">
+                        Matthew Henry's Concise Commentary. Text: Christian Classics Ethereal Library via CrossWire Bible Society. Public domain.
+                    </p>
                 </div>
-            </section>
-
-
-            <section className="settings-section">
-                <h2 className="section-title">Support</h2>
-
-                <a
-                    href="https://buymeacoffee.com/karaniph"
-                    onClick={openLink('https://buymeacoffee.com/karaniph')}
-                    className="support-button"
-                >
-                    ☕ Buy Me a Coffee
-                </a>
-                <p className="support-text">
-                    Help keep this spiritual companion free and growing.
-                </p>
             </section>
         </div>
     );

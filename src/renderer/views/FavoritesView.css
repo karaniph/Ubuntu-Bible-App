@@ -150,6 +150,22 @@
     border-left-color: #e91e63;
 }
 
+.favorite-card.highlight-orange {
+    border-left-color: #ff9800;
+}
+
+.favorite-card.highlight-purple {
+    border-left-color: #9c27b0;
+}
+
+.favorite-card.highlight-red {
+    border-left-color: #f44336;
+}
+
+.favorite-card.highlight-teal {
+    border-left-color: #009688;
+}
+
 .empty-state {
     text-align: center;
     color: var(--text-muted);

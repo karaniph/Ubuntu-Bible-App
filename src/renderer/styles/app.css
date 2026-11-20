@@ -4,8 +4,18 @@
     --highlight-green: rgba(76, 175, 80, 0.4);
     --highlight-blue: rgba(33, 150, 243, 0.4);
     --highlight-pink: rgba(233, 30, 99, 0.4);
+    --highlight-orange: rgba(255, 152, 0, 0.4);
+    --highlight-purple: rgba(156, 39, 176, 0.4);
+    --highlight-red: rgba(244, 67, 54, 0.4);
+    --highlight-teal: rgba(0, 150, 136, 0.4);
     --accent-muted: rgba(211, 84, 0, 0.1);
     /* fallback */
+}
+
+/* The yellow wash is light, so the dark theme's light-grey text needs to be
+   white on it to stay readable (5.3:1). The highlight colour itself is unchanged. */
+.theme-dark .verse-row.highlight-yellow .verse-text:not(.verse-omitted) {
+    color: #ffffff;
 }
 
 /* App Layout */
