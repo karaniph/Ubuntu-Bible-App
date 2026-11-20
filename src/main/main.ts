@@ -1,5 +1,6 @@
 import { app, BrowserWindow, clipboard, ipcMain, Menu, shell } from 'electron';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus, requireDatabase } from './database';
 import { listStudies, getStudy, createStudy, updateStudy, deleteStudy, addStudyPassages, updateStudyPassageNote, removeStudyPassage, moveStudyPassage, runStudyWrite } from './studies';
@@ -26,23 +27,6 @@ if (isSnapRuntime) {
     app.commandLine.appendSwitch('disable-dev-shm-usage');
     app.commandLine.appendSwitch('no-sandbox');
     app.disableHardwareAcceleration();
-}
-if (process.platform === 'linux' && isSnapRuntime && process.env.XDG_CONFIG_HOME) {
-    // The snap launcher writes $XDG_CONFIG_HOME/fontconfig/fonts.conf and lists the
-    // host's ~/.cache/fontconfig in it as an extra font cache. GTK inside the snap uses
-    // the old fontconfig 2.12.6 from the gnome-3-28-1804 runtime, which misreads cache
-    // files that another fontconfig left in that host folder: every font lookup fails
-    // and the GTK Save and Print dialogs draw all text as boxes. Removing that one line
-    // makes the snap use only its own cache (built once on first use). This runs before
-    // GTK starts, so the dialogs read the corrected file.
-    const fontsConf = path.join(process.env.XDG_CONFIG_HOME, 'fontconfig', 'fonts.conf');
-    try {
-        const conf = fs.readFileSync(fontsConf, 'utf8');
-        const fixed = conf.replace(/^[ \t]*<cachedir>\/[^<]*\/\.cache\/fontconfig<\/cachedir>[ \t]*\r?\n?/gm, '');
-        if (fixed !== conf) fs.writeFileSync(fontsConf, fixed);
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('Could not update the snap font config:', err);
-    }
 }
 // Windows Store (AppX) builds run as full-trust desktop apps; Chromium's
 // sandbox works normally there, so no extra switches are needed.
@@ -336,6 +320,26 @@ function initializeDatabaseInBackground() {
 app.whenReady().then(() => {
     registerIpcHandlers();
     setAppMenu();
+    if (process.platform === 'linux' && isSnapRuntime && process.env.XDG_CONFIG_HOME) {
+        // The snap launcher writes $XDG_CONFIG_HOME/fontconfig/fonts.conf and lists the
+        // host's ~/.cache/fontconfig in it as an extra font cache. GTK inside the snap uses
+        // the old fontconfig 2.12.6 from the gnome-3-28-1804 runtime, which misreads cache
+        // files that another fontconfig left in that host folder: every font lookup fails
+        // and the GTK Save and Print dialogs draw all text as boxes. Removing that one line
+        // makes the snap use only its own cache (built once on first use).
+        // Placed here (after GTK init, before createWindow) so fontconfig 2.12.6 does not
+        // crash on a stale internal state when the second BrowserWindow is created on export.
+        const cacheDir = path.join(process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'), 'fontconfig');
+        try { fs.mkdirSync(cacheDir, { recursive: true }); } catch { /* ignore */ }
+        const fontsConf = path.join(process.env.XDG_CONFIG_HOME, 'fontconfig', 'fonts.conf');
+        try {
+            const conf = fs.readFileSync(fontsConf, 'utf8');
+            const fixed = conf.replace(/^[ \t]*<cachedir>\/[^<]*\/\.cache\/fontconfig<\/cachedir>[ \t]*\r?\n?/gm, '');
+            if (fixed !== conf) fs.writeFileSync(fontsConf, fixed);
+        } catch (err) {
+            if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('Could not update the snap font config:', err);
+        }
+    }
     createWindow();
     initializeDatabaseInBackground();
 
