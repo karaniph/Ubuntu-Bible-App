@@ -144,7 +144,7 @@ async function renderInHiddenWindow<T>(html: string, run: (win: BrowserWindow) =
         width: 820,
         height: 1100,
         webPreferences: {
-            sandbox: true,
+            sandbox: !process.env.SNAP,
             contextIsolation: true,
             nodeIntegration: false,
             partition: 'study-export', // no "persist:" prefix: in-memory session
