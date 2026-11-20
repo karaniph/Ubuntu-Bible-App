@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Expose safe APIs to renderer
 contextBridge.exposeInMainWorld('electronAPI', {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+    copyText: (text: string) => ipcRenderer.invoke('app:copyText', text),
     getDatabaseStatus: () => ipcRenderer.invoke('db:getStatus'),
     waitUntilDatabaseReady: () => ipcRenderer.invoke('db:waitUntilReady'),
     // Bible database
@@ -32,6 +33,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.invoke('db:exportBackup'),
     importBackup: (payload: BackupPayload) =>
         ipcRenderer.invoke('db:importBackup', payload),
+    // Bible studies
+    listStudies: () => ipcRenderer.invoke('studies:list'),
+    getStudy: (studyId: number, translationId: number) =>
+        ipcRenderer.invoke('studies:get', studyId, translationId),
+    createStudy: (name: string, description: string) =>
+        ipcRenderer.invoke('studies:create', name, description),
+    updateStudy: (studyId: number, name: string, description: string) =>
+        ipcRenderer.invoke('studies:update', studyId, name, description),
+    deleteStudy: (studyId: number) =>
+        ipcRenderer.invoke('studies:delete', studyId),
+    addStudyPassages: (studyId: number, passages: StudyPassageInput[]) =>
+        ipcRenderer.invoke('studies:addPassages', studyId, passages),
+    updateStudyPassageNote: (passageId: number, note: string) =>
+        ipcRenderer.invoke('studies:updatePassageNote', passageId, note),
+    removeStudyPassage: (passageId: number) =>
+        ipcRenderer.invoke('studies:removePassage', passageId),
+    moveStudyPassage: (passageId: number, direction: 'up' | 'down') =>
+        ipcRenderer.invoke('studies:movePassage', passageId, direction),
 });
 
 // Type declarations
@@ -39,6 +58,7 @@ declare global {
     interface Window {
         electronAPI: {
             openExternal: (url: string) => Promise<void>;
+            copyText: (text: string) => Promise<boolean>;
             getDatabaseStatus: () => Promise<{ ready: boolean; error: string | null; path: string | null }>;
             waitUntilDatabaseReady: () => Promise<{ ready: boolean; error: string | null; path: string | null }>;
             getTranslations: () => Promise<Translation[]>;
@@ -55,6 +75,15 @@ declare global {
             deleteReflection: (id: number) => Promise<void>;
             exportBackup: () => Promise<BackupPayload>;
             importBackup: (payload: BackupPayload) => Promise<number>;
+            listStudies: () => Promise<StudySummary[]>;
+            getStudy: (studyId: number, translationId: number) => Promise<StudyDetail | null>;
+            createStudy: (name: string, description: string) => Promise<StudyResult<StudySummary>>;
+            updateStudy: (studyId: number, name: string, description: string) => Promise<StudyResult<StudySummary>>;
+            deleteStudy: (studyId: number) => Promise<StudyResult<null>>;
+            addStudyPassages: (studyId: number, passages: StudyPassageInput[]) => Promise<StudyResult<StudyPassage[]>>;
+            updateStudyPassageNote: (passageId: number, note: string) => Promise<StudyResult<{ id: number; note: string; updated_at: string }>>;
+            removeStudyPassage: (passageId: number) => Promise<StudyResult<null>>;
+            moveStudyPassage: (passageId: number, direction: 'up' | 'down') => Promise<StudyResult<number[]>>;
         };
     }
 }
@@ -101,3 +130,55 @@ export interface BackupPayload {
     exportedAt: string;
     reflections: Array<{ day_key: string; date: string; verse: string; text: string }>;
 }
+
+// Bible studies. Passages are stored as references (book code + chapters/verses),
+// never as verse ids, so the same study works in every translation.
+export interface StudySummary {
+    id: number;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at: string;
+    passage_count: number;
+}
+
+export interface StudyPassage {
+    id: number;
+    study_id: number;
+    position: number;
+    book_code: string;
+    chapter_start: number;
+    verse_start: number | null; // null = whole chapters chapter_start..chapter_end
+    chapter_end: number;
+    verse_end: number | null;
+    note: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface StudyVerse {
+    id: number;
+    chapter: number;
+    verse: number;
+    text: string;
+}
+
+export interface StudyPassageWithText extends StudyPassage {
+    book_id: number;
+    book_name: string;
+    verses: StudyVerse[];
+}
+
+export interface StudyDetail extends StudySummary {
+    passages: StudyPassageWithText[];
+}
+
+export interface StudyPassageInput {
+    bookCode: string;
+    chapterStart: number;
+    chapterEnd: number;
+    verseStart: number | null;
+    verseEnd: number | null;
+}
+
+export type StudyResult<T> = { ok: true; value: T } | { ok: false; error: string };

@@ -164,3 +164,61 @@
 .backup-file-input {
     display: none;
 }
+
+.settings-section .setting-row + .setting-row {
+    margin-top: 16px;
+}
+
+.range-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.range-control input[type='range'] {
+    width: 180px;
+    accent-color: var(--accent);
+}
+
+.range-small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.range-large {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+}
+
+.choice-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.choice-button {
+    padding: 8px 14px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.choice-button:hover {
+    border-color: var(--accent);
+}
+
+.choice-button.active {
+    border-color: var(--accent);
+    background: var(--accent-muted);
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.toggle-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}

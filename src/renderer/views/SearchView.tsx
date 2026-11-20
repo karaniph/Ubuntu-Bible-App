@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import './SearchView.css';
 import { NavigationTarget } from '../App';
+import { BookLike, buildBookLookup, formatReference, parseReference } from '../lib/reference';
+import { loadLastRead, stripPilcrow } from '../lib/storage';
 
 interface Verse {
     id: number;
@@ -39,6 +41,52 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
     const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
     const [translations, setTranslations] = useState<Translation[]>([]);
     const [translationId, setTranslationId] = useState<number>(0);
+    const [bookLookup, setBookLookup] = useState<Map<string, BookLike>>(new Map());
+    const [refMessage, setRefMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        window.electronAPI.getBooks()
+            .then((books) => setBookLookup(buildBookLookup(books)))
+            .catch(() => onError?.('Could not load books.'));
+    }, []);
+
+    // A typed Bible reference (book + chapter) is a jump, not a text search.
+    const reference = parseReference(query, bookLookup);
+
+    useEffect(() => setRefMessage(null), [query, translationId]);
+
+    const goToReference = async () => {
+        if (!reference || translationId === 0) return;
+        try {
+            const { book, chapter } = reference;
+            const chapterCount = await window.electronAPI.getChapterCount(book.id, translationId);
+            if (chapter < 1 || chapter > chapterCount) {
+                setRefMessage(`${book.name} has ${chapterCount} chapter${chapterCount === 1 ? '' : 's'}, so chapter ${chapter} doesn't exist.`);
+                return;
+            }
+            let verse = reference.verse;
+            let verseEnd = reference.verseEnd;
+            if (verse !== undefined) {
+                const chapterVerses = await window.electronAPI.getVerses(translationId, book.id, chapter);
+                const last = chapterVerses.reduce((max, v) => Math.max(max, v.verse), 0);
+                if (verseEnd !== undefined && verseEnd < verse) [verse, verseEnd] = [verseEnd, verse];
+                if (verse < 1 || verse > last) {
+                    setRefMessage(`${book.name} ${chapter} has ${last} verses, so verse ${verse} doesn't exist.`);
+                    return;
+                }
+                if (verseEnd !== undefined) verseEnd = Math.min(verseEnd, last);
+            }
+            onNavigateToBible({
+                bookId: book.id,
+                chapter,
+                translationId,
+                verse,
+                verseEnd: verseEnd !== undefined && verseEnd !== verse ? verseEnd : undefined,
+            });
+        } catch {
+            onError?.('Could not open that reference.');
+        }
+    };
 
     // Load translations; default to KJV to match the Bible reader's default.
     useEffect(() => {
@@ -46,7 +94,9 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
             .then((trans) => {
                 setTranslations(trans);
                 const kjv = trans.find(t => t.code.includes('KJV') || t.name.includes('King James'));
-                setTranslationId(kjv ? kjv.id : (trans[0]?.id ?? 0));
+                const last = loadLastRead();
+                const remembered = last && trans.find(t => t.id === last.translationId);
+                setTranslationId(remembered ? remembered.id : kjv ? kjv.id : (trans[0]?.id ?? 0));
             })
             .catch(() => onError?.('Could not load translations.'));
     }, []);
@@ -57,7 +107,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
             clearTimeout(searchTimeout);
         }
 
-        if (query.trim().length < 2 || translationId === 0) {
+        if (query.trim().length < 2 || translationId === 0 || reference) {
             setResults([]);
             return;
         }
@@ -79,7 +129,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
         return () => {
             if (timeout) clearTimeout(timeout);
         };
-    }, [query, translationId]);
+    }, [query, translationId, bookLookup]);
 
     const highlightMatch = (text: string, searchTerm: string) => {
         if (!searchTerm.trim()) return text;
@@ -125,6 +175,12 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
                         aria-label="Search scripture"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && reference) {
+                                e.preventDefault();
+                                void goToReference();
+                            }
+                        }}
                         autoFocus
                     />
                     <select
@@ -141,9 +197,24 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
             </div>
 
             <div className="search-results">
+                {reference && (
+                    <>
+                        <button
+                            type="button"
+                            className="goto-reference"
+                            aria-label={`Go to ${formatReference(reference)}`}
+                            onClick={() => void goToReference()}
+                        >
+                            <span className="goto-label">Go to {formatReference(reference)}</span>
+                            <span className="goto-hint">Enter ↵</span>
+                        </button>
+                        {refMessage && <p className="goto-message" role="status">{refMessage}</p>}
+                    </>
+                )}
+
                 {loading && <p className="loading-text">Searching...</p>}
 
-                {!loading && query.length >= 2 && results.length === 0 && (
+                {!loading && !reference && query.length >= 2 && results.length === 0 && (
                     <p className="no-results">No verses found for "{query}"</p>
                 )}
 
@@ -162,7 +233,7 @@ export default function SearchView({ onNavigateToBible, onError }: SearchViewPro
                                 {verse.book_name} {verse.chapter}:{verse.verse}
                             </p>
                             <p className="result-text">
-                                {highlightMatch(verse.text, query)}
+                                {highlightMatch(stripPilcrow(verse.text), query)}
                             </p>
                         </li>
                     ))}

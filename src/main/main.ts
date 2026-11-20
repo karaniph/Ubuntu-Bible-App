@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, Menu, shell } from 'electron';
 import path from 'path';
-import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus } from './database';
+import { initDatabase, getTranslations, getBooks, getVerses, searchVerses, getChapterCount, toggleHighlight, getHighlights, getTopics, createTopic, getReflections, saveReflection, deleteReflection, exportBackup, importBackup, getDatabaseStatus, requireDatabase } from './database';
+import { listStudies, getStudy, createStudy, updateStudy, deleteStudy, addStudyPassages, updateStudyPassageNote, removeStudyPassage, moveStudyPassage, runStudyWrite } from './studies';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
@@ -104,6 +105,13 @@ async function openInBrowser(url: string) {
 
 function registerIpcHandlers() {
     ipcMain.handle('app:openExternal', async (_, url: string) => openInBrowser(url));
+    // Plain-text clipboard bridge for "Copy verse". Only non-empty strings of a
+    // sane size are accepted; nothing else can be written from the renderer.
+    ipcMain.handle('app:copyText', (_, text: unknown) => {
+        if (typeof text !== 'string' || text.length === 0 || text.length > 200000) return false;
+        clipboard.writeText(text);
+        return true;
+    });
     ipcMain.handle('db:getStatus', () => getDatabaseStatus());
     ipcMain.handle('db:waitUntilReady', async () => {
         await dbReady;
@@ -164,6 +172,44 @@ function registerIpcHandlers() {
     ipcMain.handle('db:importBackup', async (_, payload: any) => {
         await dbReady;
         return importBackup(payload);
+    });
+    // Bible studies. Every argument is validated in studies.ts; writes touch only the
+    // studies/study_passages tables and report problems as { ok: false, error }.
+    ipcMain.handle('studies:list', async () => {
+        await dbReady;
+        return listStudies(requireDatabase());
+    });
+    ipcMain.handle('studies:get', async (_, studyId: unknown, translationId: unknown) => {
+        await dbReady;
+        return getStudy(requireDatabase(), studyId, translationId);
+    });
+    ipcMain.handle('studies:create', async (_, name: unknown, description: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => createStudy(requireDatabase(), name, description));
+    });
+    ipcMain.handle('studies:update', async (_, studyId: unknown, name: unknown, description: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => updateStudy(requireDatabase(), studyId, name, description));
+    });
+    ipcMain.handle('studies:delete', async (_, studyId: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => deleteStudy(requireDatabase(), studyId));
+    });
+    ipcMain.handle('studies:addPassages', async (_, studyId: unknown, passages: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => addStudyPassages(requireDatabase(), studyId, passages));
+    });
+    ipcMain.handle('studies:updatePassageNote', async (_, passageId: unknown, note: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => updateStudyPassageNote(requireDatabase(), passageId, note));
+    });
+    ipcMain.handle('studies:removePassage', async (_, passageId: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => removeStudyPassage(requireDatabase(), passageId));
+    });
+    ipcMain.handle('studies:movePassage', async (_, passageId: unknown, direction: unknown) => {
+        await dbReady;
+        return runStudyWrite(() => moveStudyPassage(requireDatabase(), passageId, direction));
     });
 }
 
