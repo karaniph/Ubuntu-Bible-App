@@ -13,7 +13,9 @@ The Ultimate Offline Bible App for Study & Reflection — built with Electron + 
 - 🔖 **Remembers Where You Left Off** — Reopens at your last book, chapter, translation and theme
 - 📋 **Copy Verse** — Right-click a verse to copy it with its reference, e.g. “…” John 3:16 (KJV)
 - 📄 **Cleaner Reading Mode** — Paragraph breaks instead of ¶ symbols, optional verse numbers, and a paragraph layout like a printed Bible
-- 🛒 **Daily Scripture Shop** — Sidebar link to a storefront of spiritual books and journals; opens in your browser, the app sends no data
+- 📝 **Bible Studies** — Create named studies (e.g. "Wednesday Bible Study") and add passages like `Psalms 1-7`, `Romans 8` or `John 3:16-21`; each passage has its own notes, can be reordered, and reads in any of the 7 translations
+- ✅ **Select Many Verses** — Click verse numbers (or the verse text when numbers are hidden or in paragraph mode), Shift-click to select a run, then highlight, copy or add them to a study in one go
+- 🎨 **8 Highlight Colours** — Yellow, green, blue, pink, orange, purple, red and teal
 - ✍️ **Journaling** — Write reflections on verses
 - 🛡️ **Private** — All data stays on your device
 
