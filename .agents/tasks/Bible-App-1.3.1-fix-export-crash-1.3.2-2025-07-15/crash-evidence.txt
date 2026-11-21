@@ -1,0 +1,48 @@
+CRASH EVIDENCE — Bible App 1.3.1 Export Button Crash
+Collected: 2025-07-15
+
+=== STEP 1a: JOURNALCTL (user session) ===
+Nov 20 17:54:31 systemd[4475]: Started snap.bible-app.bible-app-*.scope.
+Nov 20 17:54:44 bible-app[7349]: Database connected at: /home/karaniph/snap/bible-app/25/.config/bible-app/bible.db
+Nov 20 17:54:45 bible-app[7349]: Study database opened read-only at: /snap/bible-app/25/resources/assets/study.db
+Nov 20 17:55:33 systemd[4475]: snap.bible-app.*.scope: Consumed 57.876s CPU over 1min 2.675s wall clock time, 446.5M peak.
+  → App ran and was used for ~1 min (user clicked Export during this time). No SIGABRT or SIGSEGV in journal.
+
+=== STEP 1b: SNAP RUN TEST (startup-only, no GUI) ===
+Command: snap run bible-app -- --user-data-dir=/tmp/test-bible-crash-repr 2>/tmp/bible-crash-repr.log
+Result (from /tmp/bible-crash-repr.log):
+  [10963:...FATAL:credentials.cc(127)] Check failed: . : Permission denied (13)
+  Process: Trace/breakpoint trap (core dumped)
+  → Snap process crashed immediately at startup with FATAL from Chromium credentials.cc.
+  → "Permission denied (13)" during sandbox credential check — indicates Chromium sandbox
+    setup fails under snap strict confinement when --user-data-dir points outside the snap
+    home. This may be a test-setup artifact (snap confinement blocks /tmp writes for some
+    app IDs). The app DOES work normally for the user (journalctl shows 1-min session).
+
+=== STEP 1b: DMESG ===
+No matching entries for segfault/kill/bible/electron in dmesg.
+
+=== SNAP FONTS.CONF COMPARISON ===
+Rev 24 (~/.config/fontconfig/fonts.conf in snap):
+  <cachedir>/home/karaniph/.cache/fontconfig</cachedir>  ← PRESENT (the bad line)
+
+Rev 25 (~/.config/fontconfig/fonts.conf in snap):
+  (no extra cachedir line)  ← ALREADY REMOVED by the font-fix code at module load
+
+This confirms:
+  - The font-fix code (at module level in 1.3.1) DID run before GTK init and DID modify fonts.conf.
+  - The fix ran BEFORE app.whenReady() — i.e., before GTK fully initialised.
+
+=== NOTES ON GUI AUTOMATION ===
+DISPLAY=:0 and WAYLAND_DISPLAY=wayland-0 are set. xdotool may be available, but
+automating GUI Export click requires the snap app to open its window, navigate to Studies,
+seed a study, and click Export. This was not attempted because the snap run test itself
+crashed (sandbox issue with --user-data-dir=/tmp). Full GUI export test requires a human.
+
+=== CONCLUSION ===
+Most likely root cause: font fix code runs synchronously at module level before GTK
+initialises, mutating fonts.conf while fontconfig's internal state may be unset. When the
+second BrowserWindow (sandbox: true) is created by renderInHiddenWindow() on Export click,
+GTK/fontconfig re-reads fonts.conf and attempts to rebuild its cache directory. If the
+XDG_CACHE_HOME/fontconfig directory does not exist or fontconfig 2.12.6 encounters a stale
+internal state (from module-level mutation before GTK init), it crashes with SIGABRT/SIGSEGV.
