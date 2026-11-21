@@ -11,13 +11,10 @@ import { FEEDBACK_EMAIL, FEEDBACK_MAILTO, FEEDBACK_SUBJECT } from './feedback';
 
 const isSnapRuntime = Boolean(process.env.SNAP);
 
-if (process.platform === 'linux' && !process.env.GTK_IM_MODULE) {
-    // On GNOME/Wayland sessions (default on Ubuntu 25.10+) the GTK ibus input
-    // module fails to deliver keystrokes to the Electron window inside snap
-    // confinement — the app looks frozen and you cannot type anywhere.
-    // Forcing the simple built-in "xim" input module restores keyboard input.
-    // Only set when the user has not chosen an input module themselves, so we
-    // never override a working ibus/fcitx setup (e.g. non-Latin input).
+if (process.platform === 'linux' && isSnapRuntime) {
+    // Snap Wayland's IBus path can lose keyboard input in Electron windows.
+    // Force XIM only in the Snap runtime to restore typing without overriding
+    // a non-Snap user's deliberately selected IBus or Fcitx input module.
     process.env.GTK_IM_MODULE = 'xim';
 }
 
